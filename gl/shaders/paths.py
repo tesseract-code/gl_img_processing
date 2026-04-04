@@ -19,7 +19,7 @@ COLORBAR_SHADERS: ShaderMap = {
 SHADERS: ShaderMap = IMAGE_SHADERS | COLORBAR_SHADERS
 
 
-def _validate_shader_paths(shaders: dict[str, Path]) -> None:
+def validate_shader_paths(shaders: dict[str, Path]) -> None:
     """
     Validate that all shader files exist.
 
@@ -38,7 +38,3 @@ def _validate_shader_paths(shaders: dict[str, Path]) -> None:
         raise FileNotFoundError(
             f"Shader files not found:\n{details}"
         )
-
-def validate() -> None:
-    """Call once at startup to confirm the shader tree is intact."""
-    _validate_shader_paths(SHADERS)
