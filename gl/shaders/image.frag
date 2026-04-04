@@ -48,6 +48,8 @@ uniform bool  invert;
 //            2 = Square-root
 //            3 = Square
 uniform bool  lut_enabled;
+uniform float lut_norm_factor;  // 1.0 / (lut_max - lut_min)
+uniform float lut_min;
 uniform int   lut_type;
 
 
