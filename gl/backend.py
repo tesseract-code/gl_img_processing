@@ -34,7 +34,8 @@ import logging
 import os
 import platform
 import sys
-from dataclasses import dataclass
+
+from cross_platform.qt6_utils.image.gl.config import GL_CONFIGS, GLConfig
 
 if 'OpenGL.GL' in sys.modules:
     logging.getLogger(__name__).warning(
@@ -63,19 +64,17 @@ except ImportError as e:
     ) from e
 
 
-@dataclass
-class GLConfig:
-    DEBUG_MODE: bool = _DEBUG_ENV and platform.system() != "Darwin"
-    USE_IMMUTABLE_STORAGE: bool = False
-    FORCE_UNPACK_ALIGNMENT_1: bool = True
-
-
-config = GLConfig()
-
-
 def initialize_context():
     """Run this once after window creation."""
     logger = logging.getLogger("GLBackend")
+
+    if platform.system() == "Darwin":
+        GL_CONFIGS["default"] = GLConfig(
+            USE_IMMUTABLE_STORAGE=False,
+        )
+        logger.info(
+            "macOS detected: immutable texture storage unavailable (GL capped at 4.1)")
+        return
 
     # Warn explicitly when macOS silently suppresses debug mode so
     # operators are not left wondering why GL_DEBUG_MODE=1 had no effect.
@@ -124,7 +123,9 @@ def initialize_context():
             except Exception as e:
                 logger.debug(f"Legacy extension string unavailable: {e}")
 
-        config.USE_IMMUTABLE_STORAGE = has_immutable
+        GL_CONFIGS["default"] = GLConfig(
+            USE_IMMUTABLE_STORAGE=has_immutable,
+        )
 
         if has_immutable:
             logger.info("GL Strategy: Immutable Storage (Optimized)")
@@ -133,9 +134,11 @@ def initialize_context():
 
     except Exception as e:
         logger.error(f"Context capability check failed: {e}")
-        config.USE_IMMUTABLE_STORAGE = False
+        GL_CONFIGS["default"] = GLConfig(
+            USE_IMMUTABLE_STORAGE=False,
+        )
 
-    if config.DEBUG_MODE:
+    if GL_CONFIGS["default"].DEBUG_MODE:
         logger.info(
             f"GL Debug Mode: ENABLED (PyOpenGL checking: {OpenGL.ERROR_CHECKING})"
         )
