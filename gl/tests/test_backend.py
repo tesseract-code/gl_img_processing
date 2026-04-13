@@ -14,8 +14,9 @@ import pytest
 @pytest.fixture(autouse=True)
 def reset_gl_backend():
     for module in list(sys.modules.keys()):
-        if module.startswith("gl_backend") or module in (
-                "OpenGL", "OpenGL.GL", "OpenGL.GLU"):
+        if (module.startswith("backend") or module.startswith("gl_backend") or
+                module in (
+                "OpenGL", "OpenGL.GL", "OpenGL.GLU")):
             sys.modules.pop(module, None)
     yield
 
@@ -97,7 +98,7 @@ def test_import_without_pyopengl(mock_cross_platform_modules, monkeypatch):
     original_import = __import__
     with patch("builtins.__import__", side_effect=failing_import):
         with pytest.raises(ImportError):
-            pass
+            import OpenGL.GL  # This will hit the failing_import side effect
 
 
 def test_debug_mode_enabled_pyopengl_flags(mock_cross_platform_modules,
