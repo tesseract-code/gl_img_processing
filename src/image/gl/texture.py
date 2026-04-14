@@ -26,14 +26,14 @@ from typing import Any, Generator, Optional, Union
 
 import numpy as np
 
-from cross_platform.qt6_utils.image.gl.backend import GL
-from cross_platform.qt6_utils.image.gl.config import get_gl_config
-from cross_platform.qt6_utils.image.gl.error import (
+from image.gl.backend import GL
+from image.gl.config import get_gl_config
+from image.gl.errors import (
     GLError,
     GLMemoryError,
     GLTextureError,
 )
-from cross_platform.qt6_utils.image.gl.types import (
+from image.gl.types import (
     GLenum,
     GLHandle,
     GLint,
@@ -41,7 +41,7 @@ from cross_platform.qt6_utils.image.gl.types import (
     GLTexture,
     GLBuffer,
 )
-from cross_platform.qt6_utils.image.pipeline.metadata import FrameStats
+from image.pipeline.metadata import FrameStats
 
 __all__ = [
     "TextureUploadPayload",
@@ -71,7 +71,7 @@ class TextureUploadPayload:
     Immutable descriptor for a single PBO→Texture transfer operation.
 
     Produced by the upload pipeline and consumed by
-    `~cross_platform.qt6_utils.image.gl.frame_viewer.GLFrameViewer._upload_frame`.
+    `~image.gl.frame_viewer.GLFrameViewer._upload_frame`.
 
     Attributes:
         meta:               Frame metadata emitted with ``frame_changed``.

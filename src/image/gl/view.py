@@ -21,64 +21,64 @@ import ctypes
 import logging
 import time
 from dataclasses import dataclass
-from typing import Any, Optional, Tuple
+from typing import Optional, Tuple
 
 import numpy as np
-from PyQt6.QtCore import QPointF, QSignalBlocker, Qt, pyqtSignal, pyqtSlot
+from PyQt6.QtCore import QPointF, Qt, pyqtSignal, pyqtSlot
 from PyQt6.QtOpenGLWidgets import QOpenGLWidget
 from PyQt6.QtWidgets import QWidget
 
-from cross_platform.core.copy import get_global_executor
-from cross_platform.core.log_utils import ContextAdapter
+from pycore.mtcopy import get_global_executor
+from pycore.log.utils import ContextAdapter
 from cross_platform.qt6_utils.core.monitor import PerfStats, PerformanceMonitor
 from cross_platform.qt6_utils.core.reference import has_qt_binding
-from cross_platform.qt6_utils.image.gl.backend import GL, initialize_context
-from cross_platform.qt6_utils.image.gl.error import (
+from image.gl.backend import GL, initialize_context
+from image.gl.errors import (
     GLError,
     GLInitializationError,
     GLMemoryError,
     GLTextureError,
     GLUploadError,
 )
-from cross_platform.qt6_utils.image.gl.format import get_gl_texture_spec
-from cross_platform.qt6_utils.image.gl.pbo import (
+from image.gl.format import get_gl_texture_spec
+from image.gl.pbo import (
     PBOManager,
     configure_pixel_storage,
     memmove_pbo,
     write_pbo_buffer, PBOBufferingStrategy,
 )
-from cross_platform.qt6_utils.image.gl.program import ShaderProgramManager
-from cross_platform.qt6_utils.image.gl.quad import GeometryManager
-from cross_platform.qt6_utils.image.gl.shaders.paths import (
+from image.gl.program import ShaderProgramManager
+from image.gl.quad import GeometryManager
+from image.gl.shaders.paths import (
     IMAGE_SHADERS,
     validate_shader_paths,
 )
-from cross_platform.qt6_utils.image.gl.texture import (
+from image.gl.texture import (
     TextureManager,
     TextureState,
     TextureUploadPayload,
     alloc_texture_storage,
 )
-from cross_platform.qt6_utils.image.gl.types import (GLenum, GLbitfield,
+from image.gl.types import (GLenum, GLbitfield,
                                                      GLfloat,
                                                      GLint, GLuint,
                                                      GLsizei, GLBuffer,
                                                      GLTexture)
-from cross_platform.qt6_utils.image.gl.uniform import (
+from image.gl.uniform import (
     UniformManager,
     UniformType,
     FragmentShaderUniforms,
 )
-from cross_platform.qt6_utils.image.gl.utils import gl_context
-from cross_platform.qt6_utils.image.gl.viewport import ViewManager
-from cross_platform.qt6_utils.image.model.cmap import ColormapModel
-from cross_platform.qt6_utils.image.pipeline.metadata import FrameStats
-from cross_platform.qt6_utils.image.settings.image import (
+from image.gl.utils import gl_context
+from image.gl.viewport import ViewManager
+from image.model.cmap import ColormapModel
+from image.pipeline.metadata import FrameStats
+from image.settings.image import (
     ImageSettings,
     ImageSettingsSnapshot,
 )
-from cross_platform.qt6_utils.image.settings.pixels import PixelFormat
-from cross_platform.qt6_utils.image.utils.types import is_standard_image
+from image.settings.pixels import PixelFormat
+from image.utils.types import is_standard_image
 
 logger = ContextAdapter(logging.getLogger(__name__), {})
 

@@ -19,8 +19,8 @@ import logging
 import re
 from typing import TypedDict
 
-from cross_platform.qt6_utils.image.gl.backend import GL
-from cross_platform.qt6_utils.image.gl.error import GLInitializationError
+from image.gl.backend import GL
+from image.gl.errors import GLInitializationError
 
 __all__ = [
     "OpenGLInfo",

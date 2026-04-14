@@ -29,7 +29,7 @@ Type dispatch
 Error handling
     ``glGetError`` is drained once after each ``glUniform*`` call inside
     :meth:`~UniformManager._set_uniform_by_type`.  A non-zero code raises
-    :exc:`~cross_platform.qt6_utils.image.gl.error.GLError`, which is caught
+    :exc:`~image.gl.error.GLError`, which is caught
     one level up in :meth:`~UniformManager._set_by_loc_and_type` and logged
     rather than propagated — a failed uniform upload should degrade rendering
     quality, not crash the frame loop.
@@ -40,15 +40,15 @@ from __future__ import annotations
 import logging
 from enum import IntEnum, StrEnum, unique
 from types import SimpleNamespace
-from typing import Any, Dict, List, Optional, Type, Union, cast
+from typing import Any, Type, Union, cast
 
 import numpy as np
 
-from cross_platform.core.log_utils import ContextAdapter
-from cross_platform.qt6_utils.image.gl.backend import GL
-from cross_platform.qt6_utils.image.gl.error import GLError
-from cross_platform.qt6_utils.image.gl.types import GLenum, GLint, GLuint
-from cross_platform.qt6_utils.image.utils.data import ensure_contiguity
+from pycore.log.utils import ContextAdapter
+from image.gl.backend import GL
+from image.gl.errors import GLError
+from image.gl.types import GLenum, GLint, GLuint
+from image.utils.data import ensure_contiguity
 
 __all__ = [
     "UniformType",
@@ -427,7 +427,7 @@ class UniformManager:
         Dispatch a ``glUniform*`` call based on ``gl_type``.
 
         Calls ``glGetError`` once after the upload.  A non-zero error code
-        raises :exc:`~cross_platform.qt6_utils.image.gl.error.GLError`, which
+        raises :exc:`~image.gl.error.GLError`, which
         :meth:`_set_by_loc_and_type` catches and logs.
 
         Args:

@@ -39,14 +39,13 @@ from typing import Optional
 
 import numpy as np
 
-from cross_platform.core.copy import tuned_parallel_copy
-from cross_platform.qt6_utils.image.gl.backend import GL
-from cross_platform.qt6_utils.image.gl.error import (
+from image.gl.backend import GL
+from image.gl.errors import (
     GLMemoryError,
     GLUploadError,
     gl_error_check,
 )
-from cross_platform.qt6_utils.image.gl.types import (
+from image.gl.types import (
     GLenum,
     GLBuffer,
     GLHandle,
@@ -56,11 +55,12 @@ from cross_platform.qt6_utils.image.gl.types import (
     GLsizeiptr,
     GLbitfield,
 )
-from cross_platform.qt6_utils.image.settings.pixels import (
+from image.settings.pixels import (
     PixelFormat,
     broadcast_to_format,
 )
-from cross_platform.qt6_utils.image.utils.data import ensure_contiguity
+from image.utils.data import ensure_contiguity
+from pycore.mtcopy import tuned_parallel_copy
 
 __all__ = [
     "PBOBufferingStrategy",
@@ -211,11 +211,11 @@ def calculate_pixel_alignment(gl_type: GLenum, gl_format: GLenum) -> GLint:
 
 
 def configure_pixel_storage(
-    gl_type: GLenum,
-    gl_format: GLenum,
-    row_length: GLint = GLint(0),
-    skip_pixels: GLint = GLint(0),
-    skip_rows: GLint = GLint(0),
+        gl_type: GLenum,
+        gl_format: GLenum,
+        row_length: GLint = GLint(0),
+        skip_pixels: GLint = GLint(0),
+        skip_rows: GLint = GLint(0),
 ) -> None:
     """
     Set ``glPixelStorei`` parameters to match the layout of source pixel data.
@@ -236,10 +236,10 @@ def configure_pixel_storage(
         skip_rows:   ``GL_UNPACK_SKIP_ROWS``   value (default ``0``).
     """
     alignment = calculate_pixel_alignment(gl_type, gl_format)
-    GL.glPixelStorei(GLenum(GL.GL_UNPACK_ALIGNMENT),   alignment)
-    GL.glPixelStorei(GLenum(GL.GL_UNPACK_ROW_LENGTH),  row_length)
+    GL.glPixelStorei(GLenum(GL.GL_UNPACK_ALIGNMENT), alignment)
+    GL.glPixelStorei(GLenum(GL.GL_UNPACK_ROW_LENGTH), row_length)
     GL.glPixelStorei(GLenum(GL.GL_UNPACK_SKIP_PIXELS), skip_pixels)
-    GL.glPixelStorei(GLenum(GL.GL_UNPACK_SKIP_ROWS),   skip_rows)
+    GL.glPixelStorei(GLenum(GL.GL_UNPACK_SKIP_ROWS), skip_rows)
 
 
 # ---------------------------------------------------------------------------
@@ -287,12 +287,14 @@ def memmove_pbo(pbo_id: GLBuffer, data: np.ndarray) -> bool:
     )
 
     if not ptr_obj:
-        logger.error("memmove_pbo: glMapBufferRange returned NULL for PBO %d", pbo_id)
+        logger.error("memmove_pbo: glMapBufferRange returned NULL for PBO %d",
+                     pbo_id)
         return False
 
     ptr_int = _extract_pointer(ptr_obj)
     if ptr_int is None:
-        logger.error("memmove_pbo: could not extract pointer address for PBO %d", pbo_id)
+        logger.error(
+            "memmove_pbo: could not extract pointer address for PBO %d", pbo_id)
         return False
 
     tuned_parallel_copy(ptr_int, ensure_contiguity(data))
@@ -301,9 +303,9 @@ def memmove_pbo(pbo_id: GLBuffer, data: np.ndarray) -> bool:
 
 
 def write_pbo_buffer(
-    pbo_array: np.ndarray,
-    image: np.ndarray,
-    pixel_fmt: PixelFormat,
+        pbo_array: np.ndarray,
+        image: np.ndarray,
+        pixel_fmt: PixelFormat,
 ) -> None:
     """
     Write image data into a mapped PBO buffer, broadcasting channels if needed.
@@ -328,7 +330,8 @@ def write_pbo_buffer(
         raise GLUploadError(
             "Broadcast image shape %s does not match PBO buffer shape %s.  "
             "Ensure the PBO was acquired with the correct width, height, and "
-            "channel count for this image." % (broadcasted.shape, pbo_array.shape)
+            "channel count for this image." % (
+                broadcasted.shape, pbo_array.shape)
         )
 
     pbo_array[:] = broadcasted
@@ -358,7 +361,7 @@ def _extract_pointer(ptr_obj: object) -> Optional[int]:
     # Fast path: ctypes c_void_p surfaces .value directly.
     value = getattr(ptr_obj, "value", _SENTINEL)
     if value is not _SENTINEL:
-        return value   # may be None for a null pointer — caller checks
+        return value  # may be None for a null pointer — caller checks
 
     # Fallback: cast through ctypes for other pointer objects.
     try:
@@ -367,7 +370,7 @@ def _extract_pointer(ptr_obj: object) -> Optional[int]:
         return None
 
 
-_SENTINEL = object()   # unique sentinel distinguishable from None
+_SENTINEL = object()  # unique sentinel distinguishable from None
 
 
 # ---------------------------------------------------------------------------
@@ -394,17 +397,17 @@ class PBO:
         else:
             raw_id = int(raw)
 
-        self.id:        GLBuffer    = GLBuffer(raw_id)
-        self.capacity:  GLsizeiptr  = GLsizeiptr(0)
-        self.is_mapped: bool        = False
+        self.id: GLBuffer = GLBuffer(raw_id)
+        self.capacity: GLsizeiptr = GLsizeiptr(0)
+        self.is_mapped: bool = False
 
     def prepare_and_map(
-        self,
-        size_bytes: GLsizeiptr,
-        height: GLsizei,
-        width: GLsizei,
-        channels: GLsizei,
-        dtype: np.dtype = np.dtype("uint8"),
+            self,
+            size_bytes: GLsizeiptr,
+            height: GLsizei,
+            width: GLsizei,
+            channels: GLsizei,
+            dtype: np.dtype = np.dtype("uint8"),
     ) -> np.ndarray:
         """
         Orphan the buffer, map it, and return a shaped writable ``ndarray``.
@@ -435,7 +438,8 @@ class PBO:
         """
         # Validate that size_bytes is consistent with the requested shape so
         # that the view and reshape below are guaranteed to be correct.
-        expected_bytes = int(height) * int(width) * int(channels) * dtype.itemsize
+        expected_bytes = int(height) * int(width) * int(
+            channels) * dtype.itemsize
         if expected_bytes != int(size_bytes):
             raise GLUploadError(
                 "PBO size mismatch: size_bytes=%d does not match "
@@ -485,8 +489,8 @@ class PBO:
         # Wrap the raw pointer as a numpy array without copying.
         # ctypes.c_uint8 * N creates a ctypes array type of exactly N bytes.
         c_byte_type = ctypes.c_uint8 * int(size_bytes)
-        c_ptr       = ctypes.cast(ptr_addr, ctypes.POINTER(c_byte_type))
-        arr_bytes   = np.ctypeslib.as_array(c_ptr.contents)
+        c_ptr = ctypes.cast(ptr_addr, ctypes.POINTER(c_byte_type))
+        arr_bytes = np.ctypeslib.as_array(c_ptr.contents)
 
         # Reinterpret the byte array as the target dtype and reshape.
         # arr_bytes is always C-contiguous (it is a flat 1-D array from a
@@ -567,10 +571,10 @@ class PBOManager:
     """
 
     def __init__(
-        self,
-        buffer_strategy: PBOBufferingStrategy = PBOBufferingStrategy.DOUBLE,
-        *,
-        num_pbos: Optional[int] = None,
+            self,
+            buffer_strategy: PBOBufferingStrategy = PBOBufferingStrategy.DOUBLE,
+            *,
+            num_pbos: Optional[int] = None,
     ) -> None:
         if num_pbos is not None:
             # Backward-compatibility shim: coerce num_pbos to a strategy.
@@ -587,9 +591,9 @@ class PBOManager:
             )
 
         self.buffer_strategy: PBOBufferingStrategy = buffer_strategy
-        self.pbos:            list[PBO]             = []
-        self._lock:           threading.Lock        = threading.Lock()
-        self._cycle_iter:     Optional[itertools.cycle] = None
+        self.pbos: list[PBO] = []
+        self._lock: threading.Lock = threading.Lock()
+        self._cycle_iter: Optional[itertools.cycle] = None
 
     def initialize(self) -> None:
         """
@@ -603,7 +607,7 @@ class PBOManager:
             if self.pbos:
                 return
             count = self.buffer_strategy.value
-            self.pbos        = [PBO() for _ in range(count)]
+            self.pbos = [PBO() for _ in range(count)]
             self._cycle_iter = itertools.cycle(self.pbos)
             logger.debug(
                 "PBOManager initialised: %d PBO(s) (%s)",
@@ -640,11 +644,11 @@ class PBOManager:
             return next(self._cycle_iter)
 
     def acquire_next_writeable(
-        self,
-        width: GLsizei,
-        height: GLsizei,
-        channels: GLsizei,
-        dtype: np.dtype = np.dtype("uint8"),
+            self,
+            width: GLsizei,
+            height: GLsizei,
+            channels: GLsizei,
+            dtype: np.dtype = np.dtype("uint8"),
     ) -> tuple[PBO, np.ndarray]:
         """
         Get the next PBO, orphan its storage, and map it for direct writing.

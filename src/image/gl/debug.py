@@ -46,7 +46,8 @@ from typing import Any, Callable, NamedTuple
 
 from PyQt6.QtGui import QOpenGLContext
 
-from cross_platform.qt6_utils.image.gl.backend import GL, GLConfig
+from image.gl.backend import GL
+from image.gl.config import GLConfig
 
 # ---------------------------------------------------------------------------
 # Module logger

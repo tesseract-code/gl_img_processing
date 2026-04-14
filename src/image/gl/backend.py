@@ -39,7 +39,7 @@ import os
 import platform
 import sys
 
-from cross_platform.qt6_utils.image.gl.config import GL_CONFIGS, GLConfig
+from image.gl.config import GL_CONFIGS, GLConfig
 
 # Warn if PyOpenGL was imported before this module had a chance to set the
 # ERROR_CHECKING / ERROR_LOGGING flags.  Once GL is imported those flags are

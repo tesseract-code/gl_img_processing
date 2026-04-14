@@ -5,7 +5,7 @@ Shader compilation, linking, and program management for PyOpenGL pipelines.
 
 Provides both low-level free functions for compiling and linking individual
 shaders and a :class:`ShaderProgramManager` that owns the program handle and
-its associated :class:`~cross_platform.qt6_utils.image.gl.uniform.UniformManager`.
+its associated :class:`~image.gl.uniform.UniformManager`.
 
 Error strategy
 --------------
@@ -36,10 +36,10 @@ from typing import Iterator, Optional, Union, Any
 
 import numpy as np
 
-from cross_platform.qt6_utils.image.gl.backend import GL
-from cross_platform.qt6_utils.image.gl.error import GLShaderError
-from cross_platform.qt6_utils.image.gl.types import GLenum, GLint, GLuint
-from cross_platform.qt6_utils.image.gl.uniform import UniformManager
+from image.gl.backend import GL
+from image.gl.errors import GLShaderError
+from image.gl.types import GLenum, GLint, GLuint
+from image.gl.uniform import UniformManager
 
 __all__ = [
     "compile_shader",
@@ -467,7 +467,7 @@ class ShaderProgramManager:
     deletion via :func:`delete_program`) and exposes the program as a context
     manager for scoped binding.
 
-    The associated :class:`~cross_platform.qt6_utils.image.gl.uniform.UniformManager`
+    The associated :class:`~image.gl.uniform.UniformManager`
     is created alongside the program and shares its lifetime.  Access it via
     :attr:`uniform_manager` or use :meth:`batch_update_uniforms` to update
     multiple uniforms while the program is bound.
@@ -501,7 +501,7 @@ class ShaderProgramManager:
     @property
     def uniform_manager(self) -> Optional[UniformManager]:
         """
-        The :class:`~cross_platform.qt6_utils.image.gl.uniform.UniformManager`
+        The :class:`~image.gl.uniform.UniformManager`
         bound to this program, or ``None`` before :meth:`initialize` is called.
         """
         return self._uniform_manager
@@ -597,7 +597,7 @@ class ShaderProgramManager:
                 um.set_fast(location=um.locs.COLOR, value=color, uniform_type=UniformType.VEC3)
 
         Yields:
-            The :class:`~cross_platform.qt6_utils.image.gl.uniform.UniformManager`
+            The :class:`~image.gl.uniform.UniformManager`
             associated with this program.
 
         Raises:

@@ -11,8 +11,8 @@ import logging
 from contextlib import contextmanager
 from typing import Iterator
 
-from cross_platform.qt6_utils.image.gl.backend import GL
-from cross_platform.qt6_utils.image.gl.config import get_gl_config
+from image.gl.backend import GL
+from image.gl.config import get_gl_config
 
 __all__ = [
     "GLError",

@@ -11,7 +11,7 @@ from typing import Generator
 from PyQt6.QtGui import QSurfaceFormat
 from PyQt6.QtOpenGLWidgets import QOpenGLWidget
 
-from cross_platform.qt6_utils.image.gl.error import GLError
+from image.gl.errors import GLError
 
 logger = logging.getLogger(__name__)
 

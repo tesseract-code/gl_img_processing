@@ -45,9 +45,9 @@ from typing import Optional
 
 import numpy as np
 
-from cross_platform.core.log.log import with_logger
-from cross_platform.qt6_utils.image.gl.backend import GL
-from cross_platform.qt6_utils.image.gl.error import GLError
+from pycore.log.instance import with_logger
+from image.gl.backend import GL
+from image.gl.errors import GLError
 
 __all__ = ["GeometryManager"]
 

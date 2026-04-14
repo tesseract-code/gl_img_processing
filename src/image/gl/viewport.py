@@ -41,7 +41,7 @@ from typing import Optional
 import numpy as np
 from PyQt6.QtGui import QMatrix4x4
 
-from cross_platform.qt6_utils.image.gl.error import GLInitializationError
+from image.gl.errors import GLInitializationError
 
 __all__ = ["ViewManager"]
 

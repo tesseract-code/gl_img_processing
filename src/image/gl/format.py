@@ -38,9 +38,9 @@ from typing import TypeAlias, Union
 
 import numpy as np
 
-from cross_platform.qt6_utils.image.gl.backend import GL
-from cross_platform.qt6_utils.image.gl.error import GLTextureError
-from cross_platform.qt6_utils.image.settings.pixels import PixelFormat
+from image.gl.backend import GL
+from image.gl.errors import GLTextureError
+from image.settings.pixels import PixelFormat
 
 __all__ = [
     "GLTextureSpec",
