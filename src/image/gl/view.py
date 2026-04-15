@@ -28,10 +28,6 @@ from PyQt6.QtCore import QPointF, Qt, pyqtSignal, pyqtSlot
 from PyQt6.QtOpenGLWidgets import QOpenGLWidget
 from PyQt6.QtWidgets import QWidget
 
-from pycore.mtcopy import get_global_executor
-from pycore.log.utils import ContextAdapter
-from cross_platform.qt6_utils.core.monitor import PerfStats, PerformanceMonitor
-from cross_platform.qt6_utils.core.reference import has_qt_binding
 from image.gl.backend import GL, initialize_context
 from image.gl.errors import (
     GLError,
@@ -60,10 +56,10 @@ from image.gl.texture import (
     alloc_texture_storage,
 )
 from image.gl.types import (GLenum, GLbitfield,
-                                                     GLfloat,
-                                                     GLint, GLuint,
-                                                     GLsizei, GLBuffer,
-                                                     GLTexture)
+                            GLfloat,
+                            GLint, GLuint,
+                            GLsizei, GLBuffer,
+                            GLTexture)
 from image.gl.uniform import (
     UniformManager,
     UniformType,
@@ -79,6 +75,10 @@ from image.settings.image import (
 )
 from image.settings.pixels import PixelFormat
 from image.utils.types import is_standard_image
+from pycore.log.utils import ContextAdapter
+from pycore.mtcopy import get_global_executor
+from qtcore.monitor import PerfStats, PerformanceMonitor
+from qtcore.reference import has_qt_binding
 
 logger = ContextAdapter(logging.getLogger(__name__), {})
 
@@ -201,7 +201,8 @@ class GLFrameViewer(QOpenGLWidget):
         self._program_manager: ShaderProgramManager = ShaderProgramManager()
         self._texture_manager: TextureManager = TextureManager()
         self._view_manager: ViewManager = ViewManager()
-        self._pbo_manager: PBOManager = PBOManager(buffer_strategy=buffer_strategy)
+        self._pbo_manager: PBOManager = PBOManager(
+            buffer_strategy=buffer_strategy)
         self._geo_manager: GeometryManager = GeometryManager()
 
         # GL state shadow
