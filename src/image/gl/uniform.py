@@ -44,7 +44,7 @@ from typing import Any, Type, Union, cast
 
 import numpy as np
 
-from pycore.log.utils import ContextAdapter
+from pycore.log.ctx import ContextAdapter
 from image.gl.backend import GL
 from image.gl.errors import GLError
 from image.gl.types import GLenum, GLint, GLuint

@@ -41,7 +41,7 @@ from image.gl.types import (
     GLTexture,
     GLBuffer,
 )
-from image.pipeline.metadata import FrameStats
+from image.pipeline.stats import FrameStats
 
 __all__ = [
     "TextureUploadPayload",

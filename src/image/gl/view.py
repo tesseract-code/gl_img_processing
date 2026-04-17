@@ -68,14 +68,14 @@ from image.gl.uniform import (
 from image.gl.utils import gl_context
 from image.gl.viewport import ViewManager
 from image.model.cmap import ColormapModel
-from image.pipeline.metadata import FrameStats
-from image.settings.image import (
+from image.pipeline.stats import FrameStats
+from image.settings.base import (
     ImageSettings,
     ImageSettingsSnapshot,
 )
 from image.settings.pixels import PixelFormat
 from image.utils.types import is_standard_image
-from pycore.log.utils import ContextAdapter
+from pycore.log.ctx import ContextAdapter
 from pycore.mtcopy import get_global_executor
 from qtcore.monitor import PerfStats, PerformanceMonitor
 from qtcore.reference import has_qt_binding

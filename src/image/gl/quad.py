@@ -45,7 +45,7 @@ from typing import Optional
 
 import numpy as np
 
-from pycore.log.instance import with_logger
+from pycore.log.ctx import with_logger
 from image.gl.backend import GL
 from image.gl.errors import GLError
 
