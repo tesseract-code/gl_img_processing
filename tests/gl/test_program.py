@@ -1,7 +1,7 @@
 """
 tests/test_gl_program.py
 ========================
-Unit tests for cross_platform.qt6_utils.image.gl.program.
+Unit tests for image.gl.program.
 
 All OpenGL driver calls are intercepted by patching the ``GL`` object in
 the program module's namespace.  No real OpenGL context is required.
@@ -35,8 +35,8 @@ from unittest.mock import MagicMock, call, patch
 import numpy as np
 import pytest
 
-from cross_platform.qt6_utils.image.gl.error import GLShaderError
-from cross_platform.qt6_utils.image.gl.program import (
+from image.gl.errors import GLShaderError
+from image.gl.program import (
     ShaderProgramManager,
     compile_shader,
     create_program,
@@ -45,10 +45,10 @@ from cross_platform.qt6_utils.image.gl.program import (
     set_uniform,
     validate_program,
 )
-from cross_platform.qt6_utils.image.gl.types import GLenum, GLint, GLuint
+from image.gl.types import GLenum, GLint, GLuint
 
 # Patch target — the GL name as it exists in the program module's namespace.
-_MOD = "cross_platform.qt6_utils.image.gl.program"
+_MOD = "image.gl.program"
 
 # Stable fake handles used across tests.
 _SHADER_ID = 42

@@ -62,20 +62,20 @@ with patch("PyQt6.QtOpenGLWidgets.QOpenGLWidget", _FakeQOpenGLWidget, create=Tru
     _fake_ogl_mod.QOpenGLWidget = _FakeQOpenGLWidget
     sys.modules["PyQt6.QtOpenGLWidgets"] = _fake_ogl_mod
 
-from cross_platform.qt6_utils.image.gl import view                        # noqa: E402
-from cross_platform.qt6_utils.image.gl.view import GLFrameViewer, GLState  # noqa: E402
-from cross_platform.qt6_utils.image.gl.error import (                     # noqa: E402
+from image.gl import view                        # noqa: E402
+from image.gl.view import GLFrameViewer, GLState  # noqa: E402
+from image.gl.errors import (                     # noqa: E402
     GLError,
     GLInitializationError,
     GLMemoryError,
     GLTextureError,
     GLUploadError,
 )
-from cross_platform.qt6_utils.image.gl.texture import (                    # noqa: E402
+from image.gl.texture import (                    # noqa: E402
     FrameStats,
     TextureUploadPayload,
 )
-from cross_platform.qt6_utils.image.gl.types import (  # noqa: E402
+from image.gl.types import (  # noqa: E402
     GLenum,
     GLfloat,
     GLint,
@@ -83,13 +83,13 @@ from cross_platform.qt6_utils.image.gl.types import (  # noqa: E402
     GLTexture,
     GLBuffer, GLHandle, GLuint,
 )
-from cross_platform.qt6_utils.image.settings.pixels import PixelFormat     # noqa: E402
+from image.settings.pixels import PixelFormat     # noqa: E402
 
 # ---------------------------------------------------------------------------
 # Module path constant — used by every monkeypatch.setattr call so the
 # target string never drifts out of sync with the actual module.
 # ---------------------------------------------------------------------------
-_MOD = "cross_platform.qt6_utils.image.gl.view"
+_MOD = "image.gl.view"
 
 
 # ===========================================================================
@@ -216,14 +216,14 @@ def mock_subsystems(monkeypatch):
     The ``ViewManager`` mock is stored under the key ``"view_mgr"`` to avoid
     shadowing the ``view`` module imported at module scope.
     """
-    from cross_platform.qt6_utils.image.gl.pbo import PBOManager
-    from cross_platform.qt6_utils.image.gl.program import ShaderProgramManager
-    from cross_platform.qt6_utils.image.gl.texture import TextureManager
-    from cross_platform.qt6_utils.image.gl.quad import GeometryManager
-    from cross_platform.qt6_utils.image.gl.viewport import ViewManager
-    from cross_platform.qt6_utils.image.model.cmap import ColormapModel
+    from image.gl.pbo import PBOUploadManager
+    from image.gl.program import ShaderProgramManager
+    from image.gl.texture import TextureManager
+    from image.gl.quad import GeometryManager
+    from image.gl.viewport import ViewManager
+    from image.model.cmap import ColormapModel
 
-    pbo     = MagicMock(spec=PBOManager)
+    pbo     = MagicMock(spec=PBOUploadManager)
     prog    = MagicMock(spec=ShaderProgramManager)
     tex     = MagicMock(spec=TextureManager)
     geo     = MagicMock(spec=GeometryManager)
@@ -278,7 +278,7 @@ def frame_stats() -> FrameStats:
 @pytest.fixture()
 def settings():
     """Spec-constrained mock for ``ImageSettings`` with sensible defaults."""
-    from cross_platform.qt6_utils.image.settings.image import ImageSettings
+    from image.settings.base import ImageSettings
     s = MagicMock(spec=ImageSettings)
 
     # Live attributes read directly by the widget.
@@ -348,7 +348,7 @@ def viewer(
     ``_image_texture_id`` is pre-set to a non-zero value so ``_can_render()``
     passes in every test that does not explicitly test the guard conditions.
     """
-    from cross_platform.qt6_utils.image.gl.pbo import PBOBufferingStrategy
+    from image.gl.pbo import PBOBufferingStrategy
 
     v = GLFrameViewer.__new__(GLFrameViewer)
     GLFrameViewer.__init__(
@@ -425,7 +425,7 @@ class TestGLState:
 
 class TestConstruction:
     def _build(self, mock_subsystems, settings):
-        from cross_platform.qt6_utils.image.gl.pbo import PBOBufferingStrategy
+        from image.gl.pbo import PBOBufferingStrategy
         v = GLFrameViewer.__new__(GLFrameViewer)
         GLFrameViewer.__init__(
             v,
@@ -448,7 +448,7 @@ class TestConstruction:
     def test_performance_monitor_created_when_requested(
         self, mock_gl, mock_subsystems, settings
     ):
-        from cross_platform.qt6_utils.image.gl.pbo import PBOBufferingStrategy
+        from image.gl.pbo import PBOBufferingStrategy
         v = GLFrameViewer.__new__(GLFrameViewer)
         GLFrameViewer.__init__(
             v, settings=settings,
@@ -531,7 +531,7 @@ class TestInitializeGL:
         mock_gl, mock_initialize_context, mock_validate_shader_paths,
         mock_gl_context, mock_subsystems, settings,
     ):
-        from cross_platform.qt6_utils.image.gl.pbo import PBOBufferingStrategy
+        from image.gl.pbo import PBOBufferingStrategy
         mock_subsystems["prog"].is_valid = False
 
         v = GLFrameViewer.__new__(GLFrameViewer)
@@ -542,7 +542,7 @@ class TestInitializeGL:
         )
         v.isValid  = MagicMock(return_value=True)
         v.context  = MagicMock(return_value=MagicMock(isValid=MagicMock(return_value=True)))
-        v.gl_error = MagicMock(); v.gl_error.emit = MagicMock()
+        v.glError = MagicMock(); v.glError.emit = MagicMock()
 
         with pytest.raises(GLInitializationError):
             v.initializeGL()
@@ -552,7 +552,7 @@ class TestInitializeGL:
         mock_gl, mock_initialize_context, mock_validate_shader_paths,
         mock_gl_context, mock_subsystems, settings,
     ):
-        from cross_platform.qt6_utils.image.gl.pbo import PBOBufferingStrategy
+        from image.gl.pbo import PBOBufferingStrategy
         mock_subsystems["geo"].initialize.return_value = False
 
         v = GLFrameViewer.__new__(GLFrameViewer)
@@ -563,7 +563,7 @@ class TestInitializeGL:
         )
         v.isValid  = MagicMock(return_value=True)
         v.context  = MagicMock(return_value=MagicMock(isValid=MagicMock(return_value=True)))
-        v.gl_error = MagicMock(); v.gl_error.emit = MagicMock()
+        v.glError = MagicMock(); v.glError.emit = MagicMock()
 
         with pytest.raises(GLInitializationError):
             v.initializeGL()
@@ -573,7 +573,7 @@ class TestInitializeGL:
         mock_gl, mock_initialize_context, mock_validate_shader_paths,
         mock_gl_context, mock_subsystems, settings,
     ):
-        from cross_platform.qt6_utils.image.gl.pbo import PBOBufferingStrategy
+        from image.gl.pbo import PBOBufferingStrategy
         mock_gl.glClearColor.side_effect = GLError("bang")
 
         v = GLFrameViewer.__new__(GLFrameViewer)
@@ -584,7 +584,7 @@ class TestInitializeGL:
         )
         v.isValid  = MagicMock(return_value=True)
         v.context  = MagicMock(return_value=MagicMock(isValid=MagicMock(return_value=True)))
-        v.gl_error = MagicMock(); v.gl_error.emit = MagicMock()
+        v.glError = MagicMock(); v.glError.emit = MagicMock()
 
         with pytest.raises(GLInitializationError):
             v.initializeGL()
@@ -677,23 +677,23 @@ class TestPaintGL:
         assert viewer._gl_state.program_active is None
 
     def test_gl_texture_error_caught_and_emitted(self, viewer, mock_subsystems):
-        viewer.gl_error = MagicMock(); viewer.gl_error.emit = MagicMock()
+        viewer.glError = MagicMock(); viewer.glError.emit = MagicMock()
         mock_subsystems["tex"].get_state.side_effect = GLTextureError("tex boom")
         viewer.paintGL()
-        viewer.gl_error.emit.assert_called_once()
-        assert "Texture error" in viewer.gl_error.emit.call_args[0][0]
+        viewer.glError.emit.assert_called_once()
+        assert "Texture error" in viewer.glError.emit.call_args[0][0]
 
     def test_gl_error_caught_and_emitted(self, viewer, mock_subsystems):
-        viewer.gl_error = MagicMock(); viewer.gl_error.emit = MagicMock()
+        viewer.glError = MagicMock(); viewer.glError.emit = MagicMock()
         mock_subsystems["geo"].bind.side_effect = GLError("generic boom")
         viewer.paintGL()
-        viewer.gl_error.emit.assert_called_once()
+        viewer.glError.emit.assert_called_once()
 
     def test_unexpected_exception_caught_and_emitted(self, viewer, mock_subsystems):
-        viewer.gl_error = MagicMock(); viewer.gl_error.emit = MagicMock()
+        viewer.glError = MagicMock(); viewer.glError.emit = MagicMock()
         mock_subsystems["geo"].bind.side_effect = RuntimeError("unexpected")
         viewer.paintGL()
-        viewer.gl_error.emit.assert_called_once()
+        viewer.glError.emit.assert_called_once()
 
 
 # ===========================================================================
@@ -817,26 +817,26 @@ class TestUploadPipeline:
         viewer._process_frame()   # must not raise
 
     def test_process_frame_emits_frame_changed_on_success(self, viewer, frame_stats):
-        viewer.frame_changed = MagicMock(); viewer.frame_changed.emit = MagicMock()
+        viewer.frameChanged = MagicMock(); viewer.frameChanged.emit = MagicMock()
         payload = _make_payload(meta=frame_stats)
         viewer._latest_payload = payload
 
         with patch.object(viewer, "_upload_frame"):
             viewer._process_frame(repaint=False)
 
-        viewer.frame_changed.emit.assert_called_once_with(frame_stats)
+        viewer.frameChanged.emit.assert_called_once_with(frame_stats)
 
     def test_process_frame_emits_gl_error_on_upload_failure(self, viewer):
-        viewer.gl_error = MagicMock(); viewer.gl_error.emit = MagicMock()
+        viewer.glError = MagicMock(); viewer.glError.emit = MagicMock()
         viewer._latest_payload = _make_payload()
 
         with patch.object(viewer, "_upload_frame", side_effect=GLUploadError("fail")):
             viewer._process_frame(repaint=False)
 
-        viewer.gl_error.emit.assert_called_once()
+        viewer.glError.emit.assert_called_once()
 
     def test_process_frame_always_clears_payload_and_flag(self, viewer):
-        viewer.gl_error = MagicMock(); viewer.gl_error.emit = MagicMock()
+        viewer.glError = MagicMock(); viewer.glError.emit = MagicMock()
         viewer._latest_payload = _make_payload()
         viewer._pending_frame_update = True
 
@@ -899,12 +899,12 @@ class TestColormap:
         assert viewer._gl_state.uniforms_dirty
 
     def test_set_colormap_emits_gl_error_on_failure(self, viewer, mock_subsystems):
-        viewer.gl_error = MagicMock(); viewer.gl_error.emit = MagicMock()
+        viewer.glError = MagicMock(); viewer.glError.emit = MagicMock()
         mock_subsystems["cmap"].get_lut.side_effect = GLTextureError("lut fail")
 
         viewer._set_colormap()
 
-        viewer.gl_error.emit.assert_called_once()
+        viewer.glError.emit.assert_called_once()
 
 
 # ===========================================================================
@@ -1061,25 +1061,25 @@ class TestPresent:
     def test_emits_gl_error_and_returns_false_on_upload_error(
         self, viewer, mock_subsystems, mock_get_gl_texture_spec, frame_stats
     ):
-        viewer.gl_error = MagicMock(); viewer.gl_error.emit = MagicMock()
+        viewer.glError = MagicMock(); viewer.glError.emit = MagicMock()
         mock_subsystems["pbo"].get_next.return_value = MagicMock(id=1)
 
         with patch.object(viewer, "_process_frame", side_effect=GLUploadError("fail")):
             ok = viewer.present(_rgb_frame(), frame_stats, PixelFormat.RGB)
 
         assert not ok
-        viewer.gl_error.emit.assert_called_once()
+        viewer.glError.emit.assert_called_once()
 
     def test_emits_gl_error_and_returns_false_on_unexpected_exception(
         self, viewer, mock_subsystems, mock_get_gl_texture_spec, frame_stats
     ):
-        viewer.gl_error = MagicMock(); viewer.gl_error.emit = MagicMock()
+        viewer.glError = MagicMock(); viewer.glError.emit = MagicMock()
         mock_subsystems["pbo"].get_next.side_effect = RuntimeError("kaboom")
 
         ok = viewer.present(_rgb_frame(), frame_stats, PixelFormat.RGB)
 
         assert not ok
-        viewer.gl_error.emit.assert_called_once()
+        viewer.glError.emit.assert_called_once()
 
 
 # ===========================================================================

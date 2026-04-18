@@ -1,7 +1,7 @@
 """
 tests/test_gl_viewport.py
 =========================
-Unit tests for cross_platform.qt6_utils.image.gl.viewport.ViewManager.
+Unit tests for image.gl.viewport.ViewManager.
 
 QMatrix4x4 is a pure-math Qt class that requires no display server.
 These tests use real QMatrix4x4 instances so that the actual transform
@@ -37,8 +37,8 @@ import pytest
 from PyQt6.QtGui import QMatrix4x4
 from PyQt6.QtWidgets import QApplication
 
-from cross_platform.qt6_utils.image.gl.error import GLInitializationError
-from cross_platform.qt6_utils.image.gl.viewport import ViewManager, _FIT_PADDING
+from image.gl.errors import GLInitializationError
+from image.gl.viewport import ViewManager, _FIT_PADDING
 
 
 # ---------------------------------------------------------------------------

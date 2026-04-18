@@ -4,8 +4,8 @@ import numpy as np
 import pytest
 
 # We will import from the production module
-import cross_platform.qt6_utils.image.gl.texture as tex
-from cross_platform.qt6_utils.image.gl.types import GLenum, GLsizei, GLint
+import image.gl.texture as tex
+from image.gl.types import GLenum, GLsizei, GLint
 
 
 class DummyGL:

@@ -77,7 +77,7 @@ def mock_opengl(monkeypatch):
 
 
 def _import_gl_backend():
-    from cross_platform.qt6_utils.image.gl import backend as gl_backend
+    from image.gl import backend as gl_backend
     importlib.reload(gl_backend)
     return gl_backend
 

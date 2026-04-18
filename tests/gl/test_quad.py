@@ -28,7 +28,7 @@ from unittest.mock import MagicMock, call, patch
 import numpy as np
 import pytest
 
-from cross_platform.qt6_utils.image.gl.quad import GeometryManager
+from image.gl.quad import GeometryManager
 
 _MOD = "cross_platform.qt6_utils.image.gl.quad"
 

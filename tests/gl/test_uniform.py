@@ -1,7 +1,7 @@
 """
 tests/test_gl_uniform.py
 ========================
-Unit tests for cross_platform.qt6_utils.image.gl.uniform.
+Unit tests for image.gl.uniform.
 
 All OpenGL driver calls are intercepted by patching ``GL`` in the uniform
 module's namespace.  No real OpenGL context is required.
@@ -53,15 +53,14 @@ import pytest
 # Module-level imports -- executed ONCE at collection time.
 # The gl fixture patches GL in the module namespace after this point.
 # ---------------------------------------------------------------------------
-from cross_platform.qt6_utils.image.gl.error import GLError
-from cross_platform.qt6_utils.image.gl.types import GLenum, GLint, GLuint
-from cross_platform.qt6_utils.image.gl.uniform import (
+from image.gl.errors import GLError
+from image.gl.types import GLenum, GLint, GLuint
+from image.gl.uniform import (
     UniformManager,
     UniformType,
-    FragmentShaderUniforms,
 )
 
-_MOD = "cross_platform.qt6_utils.image.gl.uniform"
+_MOD = "image.gl.uniform"
 
 # ---------------------------------------------------------------------------
 # GL constant table
@@ -72,34 +71,34 @@ _MOD = "cross_platform.qt6_utils.image.gl.uniform"
 # the patched mock: both sides of the comparison resolve to 0x1404, etc.
 # ---------------------------------------------------------------------------
 _C: dict[str, int] = {
-    "GL_NO_ERROR":        0x0000,
-    "GL_INT":             0x1404,
-    "GL_UNSIGNED_INT":    0x1405,
-    "GL_FLOAT":           0x1406,
-    "GL_BOOL":            0x8B56,
-    "GL_FLOAT_VEC2":      0x8B50,
-    "GL_FLOAT_VEC3":      0x8B51,
-    "GL_FLOAT_VEC4":      0x8B52,
-    "GL_INT_VEC2":        0x8B53,
-    "GL_INT_VEC3":        0x8B54,
-    "GL_INT_VEC4":        0x8B55,
-    "GL_BOOL_VEC2":       0x8B57,
-    "GL_BOOL_VEC3":       0x8B58,
-    "GL_BOOL_VEC4":       0x8B59,
-    "GL_FLOAT_MAT2":      0x8B5A,
-    "GL_FLOAT_MAT3":      0x8B5B,
-    "GL_FLOAT_MAT4":      0x8B5C,
-    "GL_FLOAT_MAT2x3":    0x8B65,
-    "GL_FLOAT_MAT2x4":    0x8B66,
-    "GL_FLOAT_MAT3x2":    0x8B67,
-    "GL_FLOAT_MAT3x4":    0x8B68,
-    "GL_FLOAT_MAT4x2":    0x8B69,
-    "GL_FLOAT_MAT4x3":    0x8B6A,
-    "GL_SAMPLER_1D":      0x8B5D,
-    "GL_SAMPLER_2D":      0x8B5E,
-    "GL_SAMPLER_3D":      0x8B5F,
-    "GL_SAMPLER_CUBE":    0x8B60,
-    "GL_FALSE":           0x0000,
+    "GL_NO_ERROR": 0x0000,
+    "GL_INT": 0x1404,
+    "GL_UNSIGNED_INT": 0x1405,
+    "GL_FLOAT": 0x1406,
+    "GL_BOOL": 0x8B56,
+    "GL_FLOAT_VEC2": 0x8B50,
+    "GL_FLOAT_VEC3": 0x8B51,
+    "GL_FLOAT_VEC4": 0x8B52,
+    "GL_INT_VEC2": 0x8B53,
+    "GL_INT_VEC3": 0x8B54,
+    "GL_INT_VEC4": 0x8B55,
+    "GL_BOOL_VEC2": 0x8B57,
+    "GL_BOOL_VEC3": 0x8B58,
+    "GL_BOOL_VEC4": 0x8B59,
+    "GL_FLOAT_MAT2": 0x8B5A,
+    "GL_FLOAT_MAT3": 0x8B5B,
+    "GL_FLOAT_MAT4": 0x8B5C,
+    "GL_FLOAT_MAT2x3": 0x8B65,
+    "GL_FLOAT_MAT2x4": 0x8B66,
+    "GL_FLOAT_MAT3x2": 0x8B67,
+    "GL_FLOAT_MAT3x4": 0x8B68,
+    "GL_FLOAT_MAT4x2": 0x8B69,
+    "GL_FLOAT_MAT4x3": 0x8B6A,
+    "GL_SAMPLER_1D": 0x8B5D,
+    "GL_SAMPLER_2D": 0x8B5E,
+    "GL_SAMPLER_3D": 0x8B5F,
+    "GL_SAMPLER_CUBE": 0x8B60,
+    "GL_FALSE": 0x0000,
     "GL_ACTIVE_UNIFORMS": 0x8B86,
 }
 
@@ -139,7 +138,7 @@ def gl():
 
 # Stable fake handles used throughout.
 _PROGRAM = GLuint(7)
-_LOC     = GLint(3)
+_LOC = GLint(3)
 
 
 # =============================================================================
@@ -221,8 +220,8 @@ class TestInferType:
     # --- vectors (list) -----------------------------------------------------
 
     @pytest.mark.parametrize("value, key", [
-        ([0.0, 1.0],           "GL_FLOAT_VEC2"),
-        ([0.0, 1.0, 2.0],      "GL_FLOAT_VEC3"),
+        ([0.0, 1.0], "GL_FLOAT_VEC2"),
+        ([0.0, 1.0, 2.0], "GL_FLOAT_VEC3"),
         ([0.0, 1.0, 2.0, 3.0], "GL_FLOAT_VEC4"),
     ])
     def test_list_vector_inference(self, gl, value, key):
@@ -247,7 +246,8 @@ class TestInferType:
         ((4, 4), "GL_FLOAT_MAT4"),
     ])
     def test_ndarray_matrix_inference(self, gl, shape, key):
-        assert UniformManager._infer_type(np.eye(*shape, dtype=np.float32)) == _C[key]
+        assert UniformManager._infer_type(np.eye(*shape, dtype=np.float32)) == \
+               _C[key]
 
     # --- fallback -----------------------------------------------------------
 
@@ -269,10 +269,12 @@ class TestGlTypeName:
         assert UniformManager._gl_type_name(GLenum(_C["GL_FLOAT"])) == "float"
 
     def test_known_mat4_returns_string(self, gl):
-        assert UniformManager._gl_type_name(GLenum(_C["GL_FLOAT_MAT4"])) == "mat4"
+        assert UniformManager._gl_type_name(
+            GLenum(_C["GL_FLOAT_MAT4"])) == "mat4"
 
     def test_known_sampler_2d_returns_string(self, gl):
-        assert UniformManager._gl_type_name(GLenum(_C["GL_SAMPLER_2D"])) == "sampler2D"
+        assert UniformManager._gl_type_name(
+            GLenum(_C["GL_SAMPLER_2D"])) == "sampler2D"
 
     def test_unknown_token_returns_hex_string(self, gl):
         result = UniformManager._gl_type_name(GLenum(0xDEAD))
@@ -287,16 +289,16 @@ class TestGlTypeName:
 class TestRegistration:
 
     def _register(
-        self,
-        gl: MagicMock,
-        names: list[str],
-        locations: list[int],
-        *,
-        introspect: bool = False,
+            self,
+            gl: MagicMock,
+            names: list[str],
+            locations: list[int],
+            *,
+            introspect: bool = False,
     ) -> UniformManager:
         """Configure the mock and call register_uniforms."""
         gl.glGetUniformLocation.side_effect = locations
-        gl.glGetProgramiv.return_value = 0   # zero active uniforms to introspect
+        gl.glGetProgramiv.return_value = 0  # zero active uniforms to introspect
         mgr = UniformManager(_PROGRAM)
         mgr.register_uniforms(names, introspect=introspect)
         return mgr
@@ -369,7 +371,8 @@ class TestRegistration:
 
     def test_introspect_strips_array_suffix(self, gl):
         gl.glGetProgramiv.return_value = 1
-        gl.glGetActiveUniform.return_value = (b"lights[0]", 4, _C["GL_FLOAT_VEC3"])
+        gl.glGetActiveUniform.return_value = (
+        b"lights[0]", 4, _C["GL_FLOAT_VEC3"])
         gl.glGetUniformLocation.return_value = 1
 
         mgr = UniformManager(_PROGRAM)
@@ -379,7 +382,8 @@ class TestRegistration:
 
     def test_introspect_decodes_bytes_name(self, gl):
         gl.glGetProgramiv.return_value = 1
-        gl.glGetActiveUniform.return_value = (b"u_color", 1, _C["GL_FLOAT_VEC3"])
+        gl.glGetActiveUniform.return_value = (
+        b"u_color", 1, _C["GL_FLOAT_VEC3"])
         gl.glGetUniformLocation.return_value = 4
 
         mgr = UniformManager(_PROGRAM)
@@ -402,7 +406,7 @@ class TestRegistration:
         mgr.register_members(Stub, introspect=False)
 
         assert mgr.get_location("u_alpha") == GLint(10)
-        assert mgr.get_location("u_beta")  == GLint(11)
+        assert mgr.get_location("u_beta") == GLint(11)
 
 
 # =============================================================================
@@ -413,10 +417,10 @@ class TestCheckGlError:
 
     def test_no_error_does_not_raise(self, gl):
         gl.glGetError.return_value = _C["GL_NO_ERROR"]
-        UniformManager(_PROGRAM)._check_gl_error("test op")   # must not raise
+        UniformManager(_PROGRAM)._check_gl_error("test op")  # must not raise
 
     def test_non_zero_error_raises_gl_error(self, gl):
-        gl.glGetError.return_value = 0x0500   # GL_INVALID_ENUM
+        gl.glGetError.return_value = 0x0500  # GL_INVALID_ENUM
         with pytest.raises(GLError, match="0x500"):
             UniformManager(_PROGRAM)._check_gl_error("test op")
 
@@ -432,7 +436,8 @@ class TestCheckGlError:
 
 class TestSetAndSetFast:
 
-    def _registered(self, gl: MagicMock, name: str = "u_val", loc: int = 3) -> UniformManager:
+    def _registered(self, gl: MagicMock, name: str = "u_val",
+                    loc: int = 3) -> UniformManager:
         """Return a manager with one active uniform registered."""
         gl.glGetUniformLocation.return_value = loc
         gl.glGetProgramiv.return_value = 0
@@ -443,7 +448,8 @@ class TestSetAndSetFast:
     # --- set (by name) -----------------------------------------------------
 
     def test_set_returns_false_for_unregistered_name(self, gl):
-        assert UniformManager(_PROGRAM).set("unknown", 1.0, UniformType.FLOAT) is False
+        assert UniformManager(_PROGRAM).set("unknown", 1.0,
+                                            UniformType.FLOAT) is False
 
     def test_set_returns_true_on_success(self, gl):
         mgr = self._registered(gl)
@@ -457,7 +463,8 @@ class TestSetAndSetFast:
     # --- set_fast (by location) --------------------------------------------
 
     def test_set_fast_returns_false_for_minus_one(self, gl):
-        assert UniformManager(_PROGRAM).set_fast(GLint(-1), 1.0, UniformType.FLOAT) is False
+        assert UniformManager(_PROGRAM).set_fast(GLint(-1), 1.0,
+                                                 UniformType.FLOAT) is False
 
     def test_set_fast_dispatches_int(self, gl):
         UniformManager(_PROGRAM).set_fast(_LOC, 7, UniformType.INT)
@@ -568,7 +575,8 @@ class TestSetUniformByType:
 
     # --- bool vectors -------------------------------------------------------
 
-    @pytest.mark.parametrize("key", ["GL_BOOL_VEC2", "GL_BOOL_VEC3", "GL_BOOL_VEC4"])
+    @pytest.mark.parametrize("key",
+                             ["GL_BOOL_VEC2", "GL_BOOL_VEC3", "GL_BOOL_VEC4"])
     def test_bool_vec_calls_corresponding_iv(self, gl, key):
         n = int(key[-1])
         self._dispatch(gl, key, [True] * n)
@@ -589,11 +597,13 @@ class TestSetUniformByType:
         gl.glUniformMatrix4fv.assert_called_once()
 
     def test_mat2x3_calls_uniformmatrix2x3fv(self, gl):
-        self._dispatch(gl, "GL_FLOAT_MAT2x3", np.zeros((2, 3), dtype=np.float32))
+        self._dispatch(gl, "GL_FLOAT_MAT2x3",
+                       np.zeros((2, 3), dtype=np.float32))
         gl.glUniformMatrix2x3fv.assert_called_once()
 
     def test_mat3x2_calls_uniformmatrix3x2fv(self, gl):
-        self._dispatch(gl, "GL_FLOAT_MAT3x2", np.zeros((3, 2), dtype=np.float32))
+        self._dispatch(gl, "GL_FLOAT_MAT3x2",
+                       np.zeros((3, 2), dtype=np.float32))
         gl.glUniformMatrix3x2fv.assert_called_once()
 
     # --- unsupported type --------------------------------------------------
@@ -606,13 +616,14 @@ class TestSetUniformByType:
 
     def test_unsupported_type_logs_warning(self, gl, caplog):
         with caplog.at_level(logging.WARNING, logger=_MOD):
-            UniformManager(_PROGRAM)._set_uniform_by_type(_LOC, 0, GLenum(0xFFFF))
+            UniformManager(_PROGRAM)._set_uniform_by_type(_LOC, 0,
+                                                          GLenum(0xFFFF))
         assert caplog.records
 
     # --- GL error propagation ----------------------------------------------
 
     def test_driver_error_raises_gl_error(self, gl):
-        gl.glGetError.return_value = 0x0502   # GL_INVALID_OPERATION
+        gl.glGetError.return_value = 0x0502  # GL_INVALID_OPERATION
         with pytest.raises(GLError, match="0x502"):
             UniformManager(_PROGRAM)._set_uniform_by_type(
                 _LOC, 1.0, GLenum(_C["GL_FLOAT"])
@@ -628,7 +639,8 @@ class TestSetUniformByType:
 
     def test_gl_error_caught_by_set_fast(self, gl):
         gl.glGetError.return_value = 0x0502
-        assert UniformManager(_PROGRAM).set_fast(_LOC, 1.0, UniformType.FLOAT) is False
+        assert UniformManager(_PROGRAM).set_fast(_LOC, 1.0,
+                                                 UniformType.FLOAT) is False
 
     def test_gl_error_is_logged_when_caught(self, gl, caplog):
         gl.glGetError.return_value = 0x0502
