@@ -1,7 +1,7 @@
 """
 tests/test_gl_quad.py
 =====================
-Unit tests for cross_platform.qt6_utils.image.gl.quad.GeometryManager.
+Unit tests for image.gl.quad.GeometryManager.
 
 All GL driver calls are intercepted by patching ``GL`` in the quad module's
 namespace.  No real OpenGL context is required.
@@ -30,7 +30,7 @@ import pytest
 
 from image.gl.quad import GeometryManager
 
-_MOD = "cross_platform.qt6_utils.image.gl.quad"
+_MOD = "image.gl.quad"
 
 _VAO_ID = 11
 _VBO_ID = 22
@@ -102,7 +102,7 @@ class TestInitialize:
         gl.glDeleteVertexArrays.assert_called_once()
 
     def test_catches_gl_error_and_returns_false(self, gl):
-        from cross_platform.qt6_utils.image.gl.error import GLError
+        from image.gl.errors import GLError
         gl.glGenVertexArrays.side_effect = GLError("driver fault")
         assert GeometryManager().initialize() is False
 

@@ -56,11 +56,29 @@ _FakeQOpenGLWidget = type(
     },
 )
 
-with patch("PyQt6.QtOpenGLWidgets.QOpenGLWidget", _FakeQOpenGLWidget, create=True):
-    import sys
-    _fake_ogl_mod = types.ModuleType("PyQt6.QtOpenGLWidgets")
-    _fake_ogl_mod.QOpenGLWidget = _FakeQOpenGLWidget
-    sys.modules["PyQt6.QtOpenGLWidgets"] = _fake_ogl_mod
+# ---------------------------------------------------------------------------
+# Inject a fake QtPBOBridge before the module under test is imported so
+# the QObject subclass is never instantiated against a real Qt application.
+# ---------------------------------------------------------------------------
+_FakeQtPBOBridge = type(
+    "QtPBOBridge",
+    (),
+    {
+        "__init__":   lambda self, parent=None: None,
+        "initialize": lambda self: None,
+        "cleanup":    lambda self: None,
+    },
+)
+
+import sys  # noqa: E402
+
+_fake_ogl_mod = types.ModuleType("PyQt6.QtOpenGLWidgets")
+_fake_ogl_mod.QOpenGLWidget = _FakeQOpenGLWidget
+sys.modules["PyQt6.QtOpenGLWidgets"] = _fake_ogl_mod
+
+# Patch the real QtPBOBridge in its home module before view.py is imported.
+import image.gl.pbo as _pbo_mod  # noqa: E402
+_pbo_mod.QtPBOBridge = _FakeQtPBOBridge  # type: ignore[attr-defined]
 
 from image.gl import view                        # noqa: E402
 from image.gl.view import GLFrameViewer, GLState  # noqa: E402
@@ -215,6 +233,13 @@ def mock_subsystems(monkeypatch):
 
     The ``ViewManager`` mock is stored under the key ``"view_mgr"`` to avoid
     shadowing the ``view`` module imported at module scope.
+
+    ``QtPBOBridge`` is already neutralised at module-import time via the
+    ``_FakeQtPBOBridge`` stub, so no per-test patch is required.  A plain
+    ``MagicMock()`` is still created and exposed so tests can assert on
+    bridge calls via the ``"pbo_download_mngr"`` key; the per-test
+    ``monkeypatch.setattr`` overrides the module-level stub for the
+    duration of each test.
     """
     from image.gl.pbo import PBOUploadManager
     from image.gl.program import ShaderProgramManager
@@ -223,7 +248,8 @@ def mock_subsystems(monkeypatch):
     from image.gl.viewport import ViewManager
     from image.model.cmap import ColormapModel
 
-    pbo     = MagicMock(spec=PBOUploadManager)
+    pbo_upload_mngr   = MagicMock(spec=PBOUploadManager)
+    pbo_download_mngr = MagicMock()
     prog    = MagicMock(spec=ShaderProgramManager)
     tex     = MagicMock(spec=TextureManager)
     geo     = MagicMock(spec=GeometryManager)
@@ -255,7 +281,8 @@ def mock_subsystems(monkeypatch):
     prog.__enter__ = MagicMock(return_value=42)
     prog.__exit__  = MagicMock(return_value=False)
 
-    monkeypatch.setattr(f"{_MOD}.PBOManager",           lambda **kw: pbo)
+    monkeypatch.setattr(f"{_MOD}.PBOUploadManager",     lambda **kw: pbo_upload_mngr)
+    monkeypatch.setattr(f"{_MOD}.QtPBOBridge",          lambda parent: pbo_download_mngr)
     monkeypatch.setattr(f"{_MOD}.ShaderProgramManager", lambda: prog)
     monkeypatch.setattr(f"{_MOD}.TextureManager",       lambda: tex)
     monkeypatch.setattr(f"{_MOD}.GeometryManager",      lambda: geo)
@@ -263,7 +290,9 @@ def mock_subsystems(monkeypatch):
     monkeypatch.setattr(f"{_MOD}.ColormapModel",        lambda: cmap)
 
     return {
-        "pbo": pbo, "prog": prog, "tex": tex,
+        "pbo_upload_mngr": pbo_upload_mngr,
+        "pbo_download_mngr": pbo_download_mngr,
+        "prog": prog, "tex": tex,
         "geo": geo, "view_mgr": view_mgr, "cmap": cmap,
         "um": um,
     }
@@ -370,6 +399,11 @@ def viewer(
     v.update           = MagicMock()
     v.makeCurrent      = MagicMock()
     v.doneCurrent      = MagicMock()
+
+    # Stub Qt signals before initializeGL so that any `.connect()` or
+    # `.emit()` call on them does not trigger PyQt6's QObject cast on `v`.
+    v.imageReady = MagicMock()
+    v.glError    = MagicMock()
 
     mock_subsystems["tex"].create_texture.return_value = 99  # cmap texture id
     v.initializeGL()
@@ -1039,7 +1073,7 @@ class TestPresent:
     def test_returns_true_on_success(
         self, viewer, mock_subsystems, mock_get_gl_texture_spec, frame_stats
     ):
-        mock_subsystems["pbo"].get_next.return_value = MagicMock(id=1)
+        mock_subsystems["pbo_upload_mngr"].get_next.return_value = MagicMock(id=1)
 
         with patch.object(viewer, "_process_frame"):
             ok = viewer.present(_rgb_frame(), frame_stats, PixelFormat.RGB)
@@ -1049,7 +1083,7 @@ class TestPresent:
     def test_sets_pending_update_flag_before_process_frame(
         self, viewer, mock_subsystems, mock_get_gl_texture_spec, frame_stats
     ):
-        mock_subsystems["pbo"].get_next.return_value = MagicMock(id=1)
+        mock_subsystems["pbo_upload_mngr"].get_next.return_value = MagicMock(id=1)
 
         with patch.object(viewer, "_process_frame"):
             viewer.present(_rgb_frame(), frame_stats, PixelFormat.RGB)
@@ -1062,7 +1096,7 @@ class TestPresent:
         self, viewer, mock_subsystems, mock_get_gl_texture_spec, frame_stats
     ):
         viewer.glError = MagicMock(); viewer.glError.emit = MagicMock()
-        mock_subsystems["pbo"].get_next.return_value = MagicMock(id=1)
+        mock_subsystems["pbo_upload_mngr"].get_next.return_value = MagicMock(id=1)
 
         with patch.object(viewer, "_process_frame", side_effect=GLUploadError("fail")):
             ok = viewer.present(_rgb_frame(), frame_stats, PixelFormat.RGB)
@@ -1074,7 +1108,7 @@ class TestPresent:
         self, viewer, mock_subsystems, mock_get_gl_texture_spec, frame_stats
     ):
         viewer.glError = MagicMock(); viewer.glError.emit = MagicMock()
-        mock_subsystems["pbo"].get_next.side_effect = RuntimeError("kaboom")
+        mock_subsystems["pbo_upload_mngr"].get_next.side_effect = RuntimeError("kaboom")
 
         ok = viewer.present(_rgb_frame(), frame_stats, PixelFormat.RGB)
 
@@ -1318,7 +1352,7 @@ class TestCleanup:
 
     def test_calls_pbo_cleanup(self, viewer, mock_subsystems):
         viewer.cleanup()
-        mock_subsystems["pbo"].cleanup.assert_called_once()
+        mock_subsystems["pbo_upload_mngr"].cleanup.assert_called_once()
 
     def test_calls_geo_cleanup(self, viewer, mock_subsystems):
         viewer.cleanup()
