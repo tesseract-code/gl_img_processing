@@ -1,12 +1,12 @@
 """
-gl_texture.py
+texture.py
 =============
 Texture allocation, upload, binding, and lifecycle management for PyOpenGL.
 
 Platform notes
 --------------
 macOS (Apple GL 4.1)
-    ``GL_BGRA`` must be used as the transfer format to avoid a colour-channel
+    ``GL_BGRA`` must be used as the transfer format to avoid a color-channel
     swap artifact.  `get_platform_gl_spec` handles this automatically.
 
 Immutable storage (``glTexStorage2D``)
@@ -20,7 +20,7 @@ import contextlib
 import ctypes
 import logging
 import sys
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from enum import Enum, unique
 from typing import Any, Generator, Optional, Union
 
@@ -61,10 +61,6 @@ logger = logging.getLogger(__name__)
 _NO_TEXTURE = GLTexture(GLHandle(0))
 
 
-# ---------------------------------------------------------------------------
-# Transfer payload
-# ---------------------------------------------------------------------------
-
 @dataclass(slots=True, frozen=True)
 class TextureUploadPayload:
     """
@@ -87,20 +83,16 @@ class TextureUploadPayload:
                             (pinned/zero-copy path).
     """
 
-    meta:               FrameStats
-    pbo_id:             GLBuffer
-    width:              GLsizei
-    height:             GLsizei
-    gl_format:          GLenum
+    meta: FrameStats
+    pbo_id: GLBuffer
+    width: GLsizei
+    height: GLsizei
+    gl_format: GLenum
     gl_internal_format: GLenum
-    gl_type:            GLenum
-    data:               Optional[Any] = None
-    is_pinned:          bool          = False
+    gl_type: GLenum
+    data: Optional[np.ndarray] = None
+    is_pinned: bool = False
 
-
-# ---------------------------------------------------------------------------
-# Format descriptor
-# ---------------------------------------------------------------------------
 
 @dataclass
 class TextureSpec:
@@ -108,7 +100,7 @@ class TextureSpec:
     Describes the GL format tokens required for a specific image layout.
 
     Used by `get_platform_gl_spec`, `TextureManager.allocate_from_spec`,
-    and `TextureManager.upload_image` to keep format decisions centralised.
+    and `TextureManager.upload_image` to keep format decisions centralized.
 
     Attributes:
         internal_format: GL internal-format token (GPU storage).
@@ -119,9 +111,9 @@ class TextureSpec:
     """
 
     internal_format: GLenum
-    fmt:             GLenum
-    type:            GLenum
-    swizzle_needed:  bool
+    fmt: GLenum
+    type: GLenum
+    swizzle_needed: bool
 
 
 def get_platform_gl_spec() -> TextureSpec:
@@ -152,14 +144,10 @@ def get_platform_gl_spec() -> TextureSpec:
     )
 
 
-# ---------------------------------------------------------------------------
-# Format compatibility
-# ---------------------------------------------------------------------------
-
 def _validate_image_for_spec(
-    image_data: np.ndarray,
-    spec: TextureSpec,
-    in_place: bool,
+        image_data: np.ndarray,
+        spec: TextureSpec,
+        in_place: bool,
 ) -> np.ndarray:
     """
     Validate and coerce ``image_data`` to the dtype required by ``spec``.
@@ -202,9 +190,9 @@ def _validate_image_for_spec(
 
 
 def ensure_format_compatibility(
-    image_data: np.ndarray,
-    spec: TextureSpec,
-    in_place: bool = True,
+        image_data: np.ndarray,
+        spec: TextureSpec,
+        in_place: bool = True,
 ) -> np.ndarray:
     """
     Coerce an image array to be compatible with ``spec`` for GPU upload.
@@ -237,9 +225,9 @@ def ensure_format_compatibility(
     # to avoid a redundant allocation.
     if not image_data.flags["C_CONTIGUOUS"]:
         if (
-            spec.swizzle_needed
-            and image_data.ndim == 3
-            and image_data.shape[-1] >= 3
+                spec.swizzle_needed
+                and image_data.ndim == 3
+                and image_data.shape[-1] >= 3
         ):
             new_order = [2, 1, 0, 3] if image_data.shape[-1] == 4 else [2, 1, 0]
             return np.ascontiguousarray(image_data[..., new_order])
@@ -253,11 +241,11 @@ def ensure_format_compatibility(
     if image_data.ndim == 3 and image_data.shape[-1] >= 3:
         channels = image_data.shape[-1]
         if in_place:
-            # Reshape to (N, C) to operate on individual colour channels.
+            # Reshape to (N, C) to operate on individual color channels.
             # A temporary copy of channel 0 is required to avoid clobbering
             # before channel 2 is written.
-            flat    = image_data.reshape(-1, channels)
-            tmp     = flat[:, 0].copy()
+            flat = image_data.reshape(-1, channels)
+            tmp = flat[:, 0].copy()
             flat[:, 0] = flat[:, 2]
             flat[:, 2] = tmp
             return image_data
@@ -268,19 +256,15 @@ def ensure_format_compatibility(
     return image_data
 
 
-# ---------------------------------------------------------------------------
-# Storage allocation
-# ---------------------------------------------------------------------------
-
 def alloc_texture_storage(
-    target:     GLenum,
-    width:      GLsizei,
-    height:     GLsizei,
-    gl_fmt:     GLenum,
-    gl_int_fmt: GLenum,
-    gl_type:    GLenum,
-    data:       Any,
-    levels:     GLint = GLint(1),
+        target: GLenum,
+        width: GLsizei,
+        height: GLsizei,
+        gl_fmt: GLenum,
+        gl_int_fmt: GLenum,
+        gl_type: GLenum,
+        data: Any,
+        levels: GLint = GLint(1),
 ) -> None:
     """
     Allocate GPU texture storage and optionally upload initial pixel data.
@@ -333,7 +317,8 @@ def alloc_texture_storage(
                 # AttributeError: glTexStorage2D is not available despite the
                 # config flag — degrade gracefully to the mutable path.
                 logger.warning(
-                    "glTexStorage2D failed (%s); falling back to glTexImage2D.", e
+                    "glTexStorage2D failed (%s); falling back to glTexImage2D.",
+                    e
                 )
 
         # Mutable path: combined allocation + upload in one call.
@@ -353,15 +338,11 @@ def alloc_texture_storage(
         ) from e
 
 
-# ---------------------------------------------------------------------------
-# Binding context manager
-# ---------------------------------------------------------------------------
-
 @contextlib.contextmanager
 def bind_texture(
-    texture_id: GLTexture,
-    unit:       Optional[GLint] = None,
-    target:     GLenum = GLenum(GL.GL_TEXTURE_2D),
+        texture_id: GLTexture,
+        unit: Optional[GLint] = None,
+        target: GLenum = GLenum(GL.GL_TEXTURE_2D),
 ) -> Generator[None, None, None]:
     """
     Context manager that binds ``texture_id`` and restores the previous binding.
@@ -407,10 +388,6 @@ def bind_texture(
         GL.glBindTexture(target, restore)
 
 
-# ---------------------------------------------------------------------------
-# Swizzle mode
-# ---------------------------------------------------------------------------
-
 @unique
 class SwizzleMode(Enum):
     """
@@ -419,7 +396,7 @@ class SwizzleMode(Enum):
     Members
     -------
     GRAY
-        Routes the red channel to all three colour outputs (``R → RGB``) and
+        Routes the red channel to all three color outputs (``R → RGB``) and
         sets alpha to 1.  Used for single-channel (greyscale / ``GL_RED``)
         textures so the shader samples them as white-on-black rather than
         red-on-black.
@@ -431,9 +408,9 @@ class SwizzleMode(Enum):
         before upload.
     """
 
-    GRAY = (GL.GL_RED,  GL.GL_RED,   GL.GL_RED,  GL.GL_ONE)
-    RGB  = (GL.GL_RED,  GL.GL_GREEN, GL.GL_BLUE, GL.GL_ALPHA)
-    BGR  = (GL.GL_BLUE, GL.GL_GREEN, GL.GL_RED,  GL.GL_ALPHA)
+    GRAY = (GL.GL_RED, GL.GL_RED, GL.GL_RED, GL.GL_ONE)
+    RGB = (GL.GL_RED, GL.GL_GREEN, GL.GL_BLUE, GL.GL_ALPHA)
+    BGR = (GL.GL_BLUE, GL.GL_GREEN, GL.GL_RED, GL.GL_ALPHA)
 
     def as_gl_params(self) -> ctypes.Array:
         """
@@ -450,10 +427,6 @@ class SwizzleMode(Enum):
         # across all platforms and PyOpenGL versions.
         return (ctypes.c_int * 4)(*self.value)
 
-
-# ---------------------------------------------------------------------------
-# Per-texture state
-# ---------------------------------------------------------------------------
 
 @dataclass(slots=True, frozen=False)
 class TextureState:
@@ -472,17 +445,13 @@ class TextureState:
                          or ``None`` when the swizzle has not been set.
     """
 
-    renderer_id:     GLTexture
-    width:           GLsizei           = GLsizei(0)
-    height:          GLsizei           = GLsizei(0)
-    internal_format: GLenum            = GLenum(GL.GL_R32F)
-    is_allocated:    bool              = False
+    renderer_id: GLTexture
+    width: GLsizei = GLsizei(0)
+    height: GLsizei = GLsizei(0)
+    internal_format: GLenum = GLenum(GL.GL_R32F)
+    is_allocated: bool = False
     current_swizzle: Optional[SwizzleMode] = None
 
-
-# ---------------------------------------------------------------------------
-# Texture manager
-# ---------------------------------------------------------------------------
 
 class TextureManager:
     """
@@ -501,10 +470,6 @@ class TextureManager:
 
     def __init__(self) -> None:
         self._textures: dict[Union[str, int], TextureState] = {}
-
-    # ------------------------------------------------------------------
-    # Lifecycle
-    # ------------------------------------------------------------------
 
     def cleanup(self) -> None:
         """
@@ -540,10 +505,6 @@ class TextureManager:
             # tracebacks during interpreter shutdown.
             pass
 
-    # ------------------------------------------------------------------
-    # Creation and deletion
-    # ------------------------------------------------------------------
-
     def create_texture(self, key: Union[str, int]) -> GLTexture:
         """
         Generate a new GL texture object and register it under ``key``.
@@ -564,7 +525,7 @@ class TextureManager:
             )
             return self._textures[key].renderer_id
 
-        raw_id      = GL.glGenTextures(1)
+        raw_id = GL.glGenTextures(1)
         renderer_id = GLTexture(raw_id)
         self._textures[key] = TextureState(renderer_id=renderer_id)
         return renderer_id
@@ -588,10 +549,6 @@ class TextureManager:
             )
         except Exception as e:
             logger.error("Failed to delete texture '%s': %s", key, e)
-
-    # ------------------------------------------------------------------
-    # State accessors
-    # ------------------------------------------------------------------
 
     def get_id(self, key: Union[str, int]) -> GLTexture:
         """
@@ -625,10 +582,6 @@ class TextureManager:
         """
         return self._textures.get(key)
 
-    # ------------------------------------------------------------------
-    # Binding
-    # ------------------------------------------------------------------
-
     @staticmethod
     def activate(unit: GLint = GLint(0)) -> None:
         """
@@ -642,7 +595,7 @@ class TextureManager:
             unit: Zero-based texture unit index.
         """
         # glGetIntegerv — not glGetInteger (does not exist in PyOpenGL).
-        current  = GL.glGetIntegerv(GLenum(GL.GL_ACTIVE_TEXTURE))
+        current = GL.glGetIntegerv(GLenum(GL.GL_ACTIVE_TEXTURE))
         expected = GL.GL_TEXTURE0 + int(unit)
         if int(current) != expected:
             GL.glActiveTexture(GLenum(expected))
@@ -674,9 +627,9 @@ class TextureManager:
         GL.glBindTexture(GLenum(GL.GL_TEXTURE_2D), _NO_TEXTURE)
 
     def bound(
-        self,
-        key:  Union[str, int],
-        unit: GLint = GLint(0),
+            self,
+            key: Union[str, int],
+            unit: GLint = GLint(0),
     ) -> contextlib.AbstractContextManager:
         """
         Return a context manager that binds the texture for ``key``.
@@ -699,22 +652,19 @@ class TextureManager:
                 "Texture '%s' not found; cannot create a binding context." % key
             )
         renderer_id = self._textures[key].renderer_id
-        return bind_texture(renderer_id, unit=unit, target=GLenum(GL.GL_TEXTURE_2D))
-
-    # ------------------------------------------------------------------
-    # Allocation
-    # ------------------------------------------------------------------
+        return bind_texture(renderer_id, unit=unit,
+                            target=GLenum(GL.GL_TEXTURE_2D))
 
     def allocate(
-        self,
-        key:        Union[str, int],
-        data:       Any,
-        width:      GLsizei,
-        height:     GLsizei,
-        levels:     GLint   = GLint(1),
-        gl_int_fmt: GLenum  = GLenum(GL.GL_R32F),
-        gl_fmt:     GLenum  = GLenum(GL.GL_RED),
-        gl_type:    GLenum  = GLenum(GL.GL_FLOAT),
+            self,
+            key: Union[str, int],
+            data: Any,
+            width: GLsizei,
+            height: GLsizei,
+            levels: GLint = GLint(1),
+            gl_int_fmt: GLenum = GLenum(GL.GL_R32F),
+            gl_fmt: GLenum = GLenum(GL.GL_RED),
+            gl_type: GLenum = GLenum(GL.GL_FLOAT),
     ) -> None:
         """
         Allocate GPU storage for ``key`` and optionally upload ``data``.
@@ -744,9 +694,9 @@ class TextureManager:
                 "before it can be allocated." % key
             )
 
-        state                = self._textures[key]
-        state.width          = width
-        state.height         = height
+        state = self._textures[key]
+        state.width = width
+        state.height = height
         state.internal_format = gl_int_fmt
 
         with self.bound(key, unit=GLint(0)):
@@ -764,13 +714,13 @@ class TextureManager:
         state.is_allocated = True
 
     def allocate_from_spec(
-        self,
-        key:    Union[str, int],
-        data:   Any,
-        width:  GLsizei,
-        height: GLsizei,
-        spec:   TextureSpec,
-        levels: GLint = GLint(1),
+            self,
+            key: Union[str, int],
+            data: Any,
+            width: GLsizei,
+            height: GLsizei,
+            spec: TextureSpec,
+            levels: GLint = GLint(1),
     ) -> None:
         """
         Allocate storage and apply the correct swizzle for ``spec``.
@@ -805,16 +755,12 @@ class TextureManager:
         with self.bound(key, unit=GLint(0)):
             self.update_swizzle(key, spec.fmt)
 
-    # ------------------------------------------------------------------
-    # Upload
-    # ------------------------------------------------------------------
-
     def upload(
-        self,
-        key:     Union[str, int],
-        data:    np.ndarray,
-        format_: GLenum = GLenum(GL.GL_RED),
-        type_:   GLenum = GLenum(GL.GL_FLOAT),
+            self,
+            key: Union[str, int],
+            data: np.ndarray,
+            format_: GLenum = GLenum(GL.GL_RED),
+            type_: GLenum = GLenum(GL.GL_FLOAT),
     ) -> None:
         """
         Upload new pixel data into an already-allocated texture.
@@ -860,11 +806,11 @@ class TextureManager:
                 ) from e
 
     def upload_image(
-        self,
-        key:      Union[str, int],
-        image:    np.ndarray,
-        spec:     TextureSpec,
-        in_place: bool = True,
+            self,
+            key: Union[str, int],
+            image: np.ndarray,
+            spec: TextureSpec,
+            in_place: bool = True,
     ) -> np.ndarray:
         """
         Prepare ``image`` for the platform format and upload it.
@@ -891,14 +837,10 @@ class TextureManager:
             self.update_swizzle(key, spec.fmt)
         return prepared
 
-    # ------------------------------------------------------------------
-    # Swizzle
-    # ------------------------------------------------------------------
-
     def update_swizzle(
-        self,
-        key:       Union[str, int],
-        gl_format: GLenum,
+            self,
+            key: Union[str, int],
+            gl_format: GLenum,
     ) -> None:
         """
         Set the ``GL_TEXTURE_SWIZZLE_RGBA`` parameters for ``key``.
@@ -926,13 +868,14 @@ class TextureManager:
 
         # GL_LUMINANCE is a compatibility-profile token absent from Core 3.1+.
         # Guard with getattr so the comparison works on both profiles.
-        gl_luminance   = getattr(GL, "GL_LUMINANCE", None)
+        gl_luminance = getattr(GL, "GL_LUMINANCE", None)
         scalar_formats = {int(GL.GL_RED), int(GL.GL_R32F)}
         if gl_luminance is not None:
             scalar_formats.add(int(gl_luminance))
 
         new_mode = (
-            SwizzleMode.GRAY if int(gl_format) in scalar_formats else SwizzleMode.RGB
+            SwizzleMode.GRAY if int(
+                gl_format) in scalar_formats else SwizzleMode.RGB
         )
 
         if state.current_swizzle is new_mode:
@@ -946,17 +889,13 @@ class TextureManager:
         )
         state.current_swizzle = new_mode
 
-    # ------------------------------------------------------------------
-    # Sampling parameters
-    # ------------------------------------------------------------------
-
     @staticmethod
     def set_sampling_mode(
-        min_filter:      GLenum = GLenum(GL.GL_NEAREST),
-        mag_filter:      GLenum = GLenum(GL.GL_NEAREST),
-        wrap_s:          GLenum = GLenum(GL.GL_CLAMP_TO_EDGE),
-        wrap_t:          GLenum = GLenum(GL.GL_CLAMP_TO_EDGE),
-        generate_mipmaps: bool  = False,
+            min_filter: GLenum = GLenum(GL.GL_NEAREST),
+            mag_filter: GLenum = GLenum(GL.GL_NEAREST),
+            wrap_s: GLenum = GLenum(GL.GL_CLAMP_TO_EDGE),
+            wrap_t: GLenum = GLenum(GL.GL_CLAMP_TO_EDGE),
+            generate_mipmaps: bool = False,
     ) -> None:
         """
         Set the filter and wrap parameters on the currently bound texture.
@@ -985,14 +924,18 @@ class TextureManager:
             GL.glGenerateMipmap(GLenum(GL.GL_TEXTURE_2D))
 
         GL.glTexParameteri(
-            GLenum(GL.GL_TEXTURE_2D), GLenum(GL.GL_TEXTURE_MIN_FILTER), GLint(min_filter)
+            GLenum(GL.GL_TEXTURE_2D), GLenum(GL.GL_TEXTURE_MIN_FILTER),
+            GLint(min_filter)
         )
         GL.glTexParameteri(
-            GLenum(GL.GL_TEXTURE_2D), GLenum(GL.GL_TEXTURE_MAG_FILTER), GLint(mag_filter)
+            GLenum(GL.GL_TEXTURE_2D), GLenum(GL.GL_TEXTURE_MAG_FILTER),
+            GLint(mag_filter)
         )
         GL.glTexParameteri(
-            GLenum(GL.GL_TEXTURE_2D), GLenum(GL.GL_TEXTURE_WRAP_S), GLint(wrap_s)
+            GLenum(GL.GL_TEXTURE_2D), GLenum(GL.GL_TEXTURE_WRAP_S),
+            GLint(wrap_s)
         )
         GL.glTexParameteri(
-            GLenum(GL.GL_TEXTURE_2D), GLenum(GL.GL_TEXTURE_WRAP_T), GLint(wrap_t)
+            GLenum(GL.GL_TEXTURE_2D), GLenum(GL.GL_TEXTURE_WRAP_T),
+            GLint(wrap_t)
         )

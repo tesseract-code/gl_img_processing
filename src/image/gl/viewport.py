@@ -5,7 +5,7 @@ View transformation management for pixel-perfect image rendering.
 
 :class:`ViewManager` owns the two matrices consumed by the image shader:
 
-* **projection** — orthographic, maps pixel coordinates to normalised device
+* **projection** — orthographic, maps pixel coordinates to normalized device
   coordinates (NDC).  Rebuilt on every :meth:`~ViewManager.handle_resize`.
 * **transform** — encodes pan, zoom, and rotation applied to the fullscreen
   quad.  Rebuilt on every state change via :meth:`~ViewManager.update_transform`.
@@ -13,7 +13,7 @@ View transformation management for pixel-perfect image rendering.
 Coordinate conventions
 -----------------------
 * Viewport origin is **bottom-left** (OpenGL convention).
-* Pan and zoom-centre arguments are expressed in **viewport pixel units**.
+* Pan and zoom-center arguments are expressed in **viewport pixel units**.
 * Rotation is stored and accepted in **degrees**.
 * ``QMatrix4x4.data()`` returns elements in **column-major** order.
   :meth:`~ViewManager.get_projection_data` and
@@ -27,10 +27,10 @@ Operations are applied right-to-left in the vertex shader
 (``gl_Position = projection * transform * position``):
 
 1. Scale the NDC quad ``(±1)`` to image pixel dimensions.
-2. Rotate around the image centre.
+2. Rotate around the image center.
 3. Apply user zoom.
 4. Apply user pan.
-5. Translate the image centre to the viewport centre.
+5. Translate the image center to the viewport center.
 """
 
 from __future__ import annotations
@@ -89,16 +89,12 @@ class ViewManager:
         self.pan_y:      float = 0.0
         self.rotation:   float = 0.0   # degrees
 
-        # Viewport and image dimensions — initialised to 1 to avoid
+        # Viewport and image dimensions — initialized to 1 to avoid
         # divide-by-zero in update_transform before the first resize event.
         self.viewport_w: int = 1
         self.viewport_h: int = 1
         self.image_w:    int = 1
         self.image_h:    int = 1
-
-    # ------------------------------------------------------------------
-    # Dimension setters
-    # ------------------------------------------------------------------
 
     def set_image_size(self, width: int, height: int) -> None:
         """
@@ -124,7 +120,7 @@ class ViewManager:
         React to a viewport resize event.
 
         Rebuilds the orthographic projection so that one unit in NDC
-        corresponds to one viewport pixel, then recentres the image.
+        corresponds to one viewport pixel, then recenters the image.
 
         Args:
             width:  New viewport width in pixels.  Must be > 0.
@@ -151,10 +147,6 @@ class ViewManager:
 
         self.update_transform()
 
-    # ------------------------------------------------------------------
-    # Interactive controls
-    # ------------------------------------------------------------------
-
     def handle_pan(self, dx: float, dy: float) -> None:
         """
         Accumulate a pan delta in viewport pixel units.
@@ -176,7 +168,7 @@ class ViewManager:
         """
         Multiply the current zoom level by ``factor``.
 
-        When a centre point is supplied the pan is adjusted so that the
+        When a center point is supplied the pan is adjusted so that the
         pixel under the cursor stays stationary after the zoom.
 
         Args:
@@ -201,7 +193,7 @@ class ViewManager:
         if center_x is not None and center_y is not None:
             # Keep the viewport point (center_x, center_y) fixed in image
             # space by compensating the pan for the scale change.
-            # dx/dy is the cursor offset from the current image centre.
+            # dx/dy is the cursor offset from the current image center.
             dx = center_x - self.viewport_w / 2.0 - self.pan_x
             dy = center_y - self.viewport_h / 2.0 - self.pan_y
             self.pan_x += dx * (1.0 - factor)
@@ -217,14 +209,10 @@ class ViewManager:
         Args:
             angle_degrees: Target rotation in degrees.  Positive values rotate
                            counter-clockwise.  Any finite float is accepted;
-                           values are not clamped or normalised.
+                           values are not clamped or normalized.
         """
         self.rotation = angle_degrees
         self.update_transform()
-
-    # ------------------------------------------------------------------
-    # Preset views
-    # ------------------------------------------------------------------
 
     def reset_view(self) -> None:
         """Reset pan, zoom, and rotation to their default (identity) values."""
@@ -260,10 +248,6 @@ class ViewManager:
         self.rotation = 0.0
         self.update_transform()
 
-    # ------------------------------------------------------------------
-    # Matrix construction
-    # ------------------------------------------------------------------
-
     def update_transform(self) -> None:
         """
         Rebuild the transform matrix from the current pan / zoom / rotation state.
@@ -272,17 +256,17 @@ class ViewManager:
         which means they are applied right-to-left in the vertex shader:
 
         1. **Scale** the NDC quad ``(±1)`` to image pixel dimensions.
-        2. **Rotate** around the image centre (skipped for angles < :data:`_ROTATION_EPSILON`).
+        2. **Rotate** around the image center (skipped for angles < :data:`_ROTATION_EPSILON`).
         3. **Zoom** by the user-controlled scale factor.
         4. **Pan** by the user-controlled offset.
-        5. **Translate** the image centre to the viewport centre.
+        5. **Translate** the image center to the viewport center.
 
         Called automatically by all state-mutating methods; callers rarely
         need to invoke this directly.
         """
         self.transform.setToIdentity()
 
-        # Step 5 — move the image centre to the centre of the viewport.
+        # Step 5 — move the image center to the center of the viewport.
         self.transform.translate(self.viewport_w / 2.0, self.viewport_h / 2.0, 0)
 
         # Step 4 — apply user pan in viewport pixel units.
@@ -291,16 +275,12 @@ class ViewManager:
         # Step 3 — apply user zoom.
         self.transform.scale(self.zoom_level, self.zoom_level, 1)
 
-        # Step 2 — rotate around the image centre.
+        # Step 2 — rotate around the image center.
         if abs(self.rotation) > _ROTATION_EPSILON:
             self.transform.rotate(self.rotation, 0, 0, 1)
 
         # Step 1 — scale the NDC quad (±1 → 2 units wide) to image dimensions.
         self.transform.scale(self.image_w / 2.0, self.image_h / 2.0, 1)
-
-    # ------------------------------------------------------------------
-    # Matrix data accessors
-    # ------------------------------------------------------------------
 
     def get_projection_data(self) -> np.ndarray:
         """

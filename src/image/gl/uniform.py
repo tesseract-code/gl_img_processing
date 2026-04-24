@@ -1,36 +1,36 @@
 """
-gl_uniform.py
+uniform.py
 =============
 Shader uniform location cache and type-safe upload manager for PyOpenGL.
 
 Provides two public interfaces:
 
-* :class:`UniformManager` — owns the location cache and dispatches each
+* `UniformManager` — owns the location cache and dispatches each
   ``glUniform*`` call based on the GL type token.
-* :class:`UniformType` — ``IntEnum`` mirroring every GL uniform type constant
+* `UniformType` — ``IntEnum`` mirroring every GL uniform type constant
   used by the dispatch table.
 
 Design notes
 ------------
 Location caching
     ``glGetUniformLocation`` is a driver round-trip.  All locations are queried
-    once in :meth:`~UniformManager.register_uniforms` and stored in a dict and
-    a :class:`~types.SimpleNamespace` (``manager.locs.brightness``).  Hot-path
-    callers use :meth:`~UniformManager.set_fast` with a pre-fetched
+    once in `~UniformManager.register_uniforms` and stored in a dict and
+    a `~types.SimpleNamespace` (``manager.locs.brightness``).  Hot-path
+    callers use `~UniformManager.set_fast` with a pre-fetched
     ``GLint`` location to avoid even the dict lookup.
 
 Type dispatch
-    :meth:`~UniformManager.set_fast` requires an explicit :class:`UniformType`.
-    :meth:`~UniformManager.set` accepts ``UniformType.AUTO``, which first
+    `~UniformManager.set_fast` requires an explicit `UniformType`.
+    `~UniformManager.set` accepts ``UniformType.AUTO``, which first
     checks the introspection cache (populated during registration) and falls
-    back to :meth:`~UniformManager._infer_type` for values set before
+    back to `~UniformManager._infer_type` for values set before
     introspection ran.
 
 Error handling
     ``glGetError`` is drained once after each ``glUniform*`` call inside
-    :meth:`~UniformManager._set_uniform_by_type`.  A non-zero code raises
-    :exc:`~image.gl.error.GLError`, which is caught
-    one level up in :meth:`~UniformManager._set_by_loc_and_type` and logged
+    `~UniformManager._set_uniform_by_type`.  A non-zero code raises
+    `~image.gl.error.GLError`, which is caught
+    one level up in `~UniformManager._set_by_loc_and_type` and logged
     rather than propagated — a failed uniform upload should degrade rendering
     quality, not crash the frame loop.
 """
@@ -44,11 +44,11 @@ from typing import Any, Type, Union, cast
 
 import numpy as np
 
-from pycore.log.ctx import ContextAdapter
 from image.gl.backend import GL
 from image.gl.errors import GLError
 from image.gl.types import GLenum, GLint, GLuint
 from image.utils.data import ensure_contiguity
+from pycore.log.ctx import ContextAdapter
 
 __all__ = [
     "UniformType",
@@ -59,10 +59,6 @@ __all__ = [
 logger = ContextAdapter(logging.getLogger(__name__), {})
 
 
-# ---------------------------------------------------------------------------
-# Uniform type enumeration
-# ---------------------------------------------------------------------------
-
 class UniformType(IntEnum):
     """
     OpenGL uniform type tokens as a Python ``IntEnum``.
@@ -71,14 +67,14 @@ class UniformType(IntEnum):
     a ``UniformType`` can be passed directly wherever a ``GLenum`` is expected.
 
     ``AUTO`` (``-1``) is a sentinel that triggers type inference in
-    :meth:`UniformManager.set`; it is not a valid GL token and must never be
-    passed to :meth:`UniformManager.set_fast`.
+    `UniformManager.set`; it is not a valid GL token and must never be
+    passed to `UniformManager.set_fast`.
     """
     # Scalars
-    INT          = GL.GL_INT
+    INT = GL.GL_INT
     UNSIGNED_INT = GL.GL_UNSIGNED_INT
-    FLOAT        = GL.GL_FLOAT
-    BOOL         = GL.GL_BOOL
+    FLOAT = GL.GL_FLOAT
+    BOOL = GL.GL_BOOL
 
     # Float vectors
     VEC2 = GL.GL_FLOAT_VEC2
@@ -109,18 +105,20 @@ class UniformType(IntEnum):
     MAT4x3 = GL.GL_FLOAT_MAT4x3
 
     # Samplers — all uploaded as int (texture unit index)
-    SAMPLER_1D   = GL.GL_SAMPLER_1D
-    SAMPLER_2D   = GL.GL_SAMPLER_2D
-    SAMPLER_3D   = GL.GL_SAMPLER_3D
+    SAMPLER_1D = GL.GL_SAMPLER_1D
+    SAMPLER_2D = GL.GL_SAMPLER_2D
+    SAMPLER_3D = GL.GL_SAMPLER_3D
     SAMPLER_CUBE = GL.GL_SAMPLER_CUBE
 
     # Sentinel — triggers automatic type detection
     AUTO = -1
 
 
-# ---------------------------------------------------------------------------
-# Shader uniform name declarations
-# ---------------------------------------------------------------------------
+@unique
+class VertexShaderUniforms(StrEnum):
+    TRANSFORM_MATRIX = "u_transform"
+    PROJECTION_MATRIX = "u_projection"
+
 
 @unique
 class FragmentShaderUniforms(StrEnum):
@@ -128,30 +126,25 @@ class FragmentShaderUniforms(StrEnum):
     Canonical uniform variable names for the image fragment shader.
 
     Values are the exact GLSL identifiers as they appear in the shader source.
-    Used by :meth:`UniformManager.register_members` to batch-register all
+    Used by `UniformManager.register_members` to batch-register all
     uniforms from a single enum class.
     """
-    TRANSFORM_MATRIX  = "u_transform"
-    PROJECTION_MATRIX = "u_projection"
-    IMAGE_TEXTURE     = "imageTexture"
-    COLORMAP_TEXTURE  = "colormapTexture"
-    USE_CMAP          = "use_cmap"
-    BRIGHTNESS        = "brightness"
-    CONTRAST          = "contrast"
-    INV_GAMMA         = "inv_gamma"
-    COLOR_BALANCE     = "color_balance"
-    INVERT            = "invert"
-    LUT_ENABLED       = "lut_enabled"
-    LUT_MIN           = "lut_min"
-    LUT_NORM_FACTOR   = "lut_norm_factor"
-    LUT_TYPE          = "lut_type"
-    NORM_VMIN         = "norm_vmin"
-    NORM_VMAX         = "norm_vmax"
 
+    IMAGE_TEXTURE = "imageTexture"
+    COLORMAP_TEXTURE = "colormapTexture"
+    USE_CMAP = "use_cmap"
+    BRIGHTNESS = "brightness"
+    CONTRAST = "contrast"
+    INV_GAMMA = "inv_gamma"
+    COLOR_BALANCE = "color_balance"
+    INVERT = "invert"
+    LUT_ENABLED = "lut_enabled"
+    LUT_MIN = "lut_min"
+    LUT_NORM_FACTOR = "lut_norm_factor"
+    LUT_TYPE = "lut_type"
+    NORM_VMIN = "norm_vmin"
+    NORM_VMAX = "norm_vmax"
 
-# ---------------------------------------------------------------------------
-# Uniform manager
-# ---------------------------------------------------------------------------
 
 class UniformManager:
     """
@@ -166,8 +159,8 @@ class UniformManager:
         manager.set_fast(manager.locs.brightness, 1.2, UniformType.FLOAT)
 
     Attributes:
-        locs: :class:`~types.SimpleNamespace` populated by
-              :meth:`register_uniforms`.  Each active uniform gets an
+        locs: `~types.SimpleNamespace` populated by
+              `register_uniforms`.  Each active uniform gets an
               attribute whose name matches the GLSL identifier and whose value
               is the cached :data:`GLint` location.  Inactive uniforms
               (location ``-1``) are omitted so that attribute access raises
@@ -179,7 +172,7 @@ class UniformManager:
 
     def __init__(self, program: GLuint) -> None:
         """
-        Initialise the manager for ``program``.
+        Initialize the manager for ``program``.
 
         Args:
             program: A linked OpenGL program handle (:data:`GLuint`).
@@ -201,32 +194,24 @@ class UniformManager:
         # Only active uniforms (location != -1) receive an attribute here.
         self.locs = SimpleNamespace()
 
-    # ------------------------------------------------------------------
-    # Properties
-    # ------------------------------------------------------------------
-
     @property
     def program(self) -> GLuint:
         """The OpenGL program handle this manager is bound to."""
         return self._program
 
-    # ------------------------------------------------------------------
-    # Registration
-    # ------------------------------------------------------------------
-
     def register_members(
-        self,
-        enum_cls: Type[StrEnum],
-        introspect: bool = True,
+            self,
+            enum_cls: Type[StrEnum],
+            introspect: bool = True,
     ) -> None:
         """
-        Register all uniforms declared in a :class:`~enum.StrEnum` class.
+        Register all uniforms declared in a `~enum.StrEnum` class.
 
         Extracts the string values from each enum member and forwards them to
-        :meth:`register_uniforms`.
+        `register_uniforms`.
 
         Args:
-            enum_cls:   A :class:`~enum.StrEnum` whose member values are GLSL
+            enum_cls:   A `~enum.StrEnum` whose member values are GLSL
                         uniform identifiers.
             introspect: When ``True``, also queries the driver for each
                         uniform's type and size via ``glGetActiveUniform``.
@@ -237,15 +222,15 @@ class UniformManager:
         self.register_uniforms(names, introspect=introspect)
 
     def register_uniforms(
-        self,
-        names: list[str],
-        introspect: bool = True,
+            self,
+            names: list[str],
+            introspect: bool = True,
     ) -> None:
         """
         Query and cache locations for the given uniform names.
 
         Binds the program for the duration of the query, then restores the
-        unbound state.  Uniforms that the GLSL compiler has optimised away
+        unbound state.  Uniforms that the GLSL compiler has optimized away
         (location ``-1``) are logged at ``WARNING`` level but do not raise;
         they are excluded from :attr:`locs` so accidental ``set_fast`` calls
         with a stale ``-1`` location are caught at the ``if location == -1``
@@ -255,8 +240,8 @@ class UniformManager:
             names:      GLSL uniform identifiers to register.
             introspect: When ``True``, calls ``glGetActiveUniform`` for every
                         active uniform and caches the type token so that
-                        :meth:`set` can dispatch correctly without an explicit
-                        :class:`UniformType` argument.
+                        `set` can dispatch correctly without an explicit
+                        `UniformType` argument.
         """
         GL.glUseProgram(self._program)
         self._check_gl_error("glUseProgram before uniform registration")
@@ -293,22 +278,18 @@ class UniformManager:
         GL.glUseProgram(0)
         self._check_gl_error("glUseProgram after uniform registration")
 
-    # ------------------------------------------------------------------
-    # Public set interface
-    # ------------------------------------------------------------------
-
     def set(
-        self,
-        name: str,
-        value: Any,
-        uniform_type: Union[UniformType, GLenum] = UniformType.AUTO,
+            self,
+            name: str,
+            value: Any,
+            uniform_type: Union[UniformType, GLenum] = UniformType.AUTO,
     ) -> bool:
         """
         Upload a uniform value by GLSL name.
 
         Looks up the cached location for ``name`` and delegates to
-        :meth:`_set_by_loc_and_type`.  Slightly slower than :meth:`set_fast`
-        due to the dict lookup; use :meth:`set_fast` inside the render loop.
+        `_set_by_loc_and_type`.  Slightly slower than `set_fast`
+        due to the dict lookup; use `set_fast` inside the render loop.
 
         Args:
             name:         GLSL uniform identifier (must have been registered).
@@ -325,10 +306,10 @@ class UniformManager:
         return self._set_by_loc_and_type(location, value, uniform_type, name)
 
     def set_fast(
-        self,
-        location: GLint,
-        value: Any,
-        uniform_type: Union[UniformType, GLenum],
+            self,
+            location: GLint,
+            value: Any,
+            uniform_type: Union[UniformType, GLenum],
     ) -> bool:
         """
         Upload a uniform value by pre-cached location.
@@ -338,7 +319,7 @@ class UniformManager:
 
         Args:
             location:     Pre-queried location from :attr:`locs` or
-                          :meth:`get_location`.  A value of ``-1`` is a
+                          `get_location`.  A value of ``-1`` is a
                           no-op that returns ``False``.
             value:        Value to upload.
             uniform_type: Explicit type — must not be :attr:`UniformType.AUTO`.
@@ -363,19 +344,15 @@ class UniformManager:
         """
         return self._locations.get(name, GLint(-1))
 
-    # ------------------------------------------------------------------
-    # Internal dispatch
-    # ------------------------------------------------------------------
-
     def _set_by_loc_and_type(
-        self,
-        location: GLint,
-        value: Any,
-        uniform_type: Union[UniformType, GLenum],
-        debug_name: str,
+            self,
+            location: GLint,
+            value: Any,
+            uniform_type: Union[UniformType, GLenum],
+            debug_name: str,
     ) -> bool:
         """
-        Resolve the type (if needed) and call :meth:`_set_uniform_by_type`.
+        Resolve the type (if needed) and call `_set_uniform_by_type`.
 
         When ``uniform_type`` is :attr:`UniformType.AUTO`, the type is taken
         from the introspection cache (populated at registration time) if
@@ -397,7 +374,7 @@ class UniformManager:
             else:
                 uniform_type = self._infer_type(value)
 
-        # Normalise to a plain GLenum int so the dispatch table only checks
+        # Normalize to a plain GLenum int so the dispatch table only checks
         # against GL constants, never against UniformType wrappers.
         if isinstance(uniform_type, UniformType):
             uniform_type = GLenum(uniform_type.value)
@@ -418,17 +395,17 @@ class UniformManager:
             return False
 
     def _set_uniform_by_type(
-        self,
-        location: GLint,
-        value: Any,
-        gl_type: GLenum,
+            self,
+            location: GLint,
+            value: Any,
+            gl_type: GLenum,
     ) -> bool:
         """
         Dispatch a ``glUniform*`` call based on ``gl_type``.
 
         Calls ``glGetError`` once after the upload.  A non-zero error code
-        raises :exc:`~image.gl.error.GLError`, which
-        :meth:`_set_by_loc_and_type` catches and logs.
+        raises `~image.gl.error.GLError`, which
+        `_set_by_loc_and_type` catches and logs.
 
         Args:
             location: Pre-resolved uniform location.
@@ -442,16 +419,15 @@ class UniformManager:
         Raises:
             GLError: If the driver reports an error after the upload.
         """
-        # ------------------------------------------------------------------ #
-        # Scalars                                                             #
-        # ------------------------------------------------------------------ #
+
         if gl_type in (
-            GL.GL_INT,
-            GL.GL_BOOL,
-            GL.GL_SAMPLER_1D,
-            GL.GL_SAMPLER_2D,
-            GL.GL_SAMPLER_3D,   # all sampler types bind as a texture-unit int
-            GL.GL_SAMPLER_CUBE,
+                GL.GL_INT,
+                GL.GL_BOOL,
+                GL.GL_SAMPLER_1D,
+                GL.GL_SAMPLER_2D,
+                GL.GL_SAMPLER_3D,
+                # all sampler types bind as a texture-unit int
+                GL.GL_SAMPLER_CUBE,
         ):
             GL.glUniform1i(location, int(value))
 
@@ -460,40 +436,24 @@ class UniformManager:
 
         elif gl_type == GL.GL_UNSIGNED_INT:
             GL.glUniform1ui(location, int(value))
-
-        # ------------------------------------------------------------------ #
-        # Float vectors                                                       #
-        # ------------------------------------------------------------------ #
         elif gl_type == GL.GL_FLOAT_VEC2:
             GL.glUniform2fv(location, 1, np.asarray(value, np.float32))
         elif gl_type == GL.GL_FLOAT_VEC3:
             GL.glUniform3fv(location, 1, np.asarray(value, np.float32))
         elif gl_type == GL.GL_FLOAT_VEC4:
             GL.glUniform4fv(location, 1, np.asarray(value, np.float32))
-
-        # ------------------------------------------------------------------ #
-        # Integer vectors                                                     #
-        # ------------------------------------------------------------------ #
         elif gl_type == GL.GL_INT_VEC2:
             GL.glUniform2iv(location, 1, np.asarray(value, np.int32))
         elif gl_type == GL.GL_INT_VEC3:
             GL.glUniform3iv(location, 1, np.asarray(value, np.int32))
         elif gl_type == GL.GL_INT_VEC4:
             GL.glUniform4iv(location, 1, np.asarray(value, np.int32))
-
-        # ------------------------------------------------------------------ #
-        # Boolean vectors — uploaded as ivec (GL represents bool as int)     #
-        # ------------------------------------------------------------------ #
         elif gl_type == GL.GL_BOOL_VEC2:
             GL.glUniform2iv(location, 1, np.asarray(value, np.int32))
         elif gl_type == GL.GL_BOOL_VEC3:
             GL.glUniform3iv(location, 1, np.asarray(value, np.int32))
         elif gl_type == GL.GL_BOOL_VEC4:
             GL.glUniform4iv(location, 1, np.asarray(value, np.int32))
-
-        # ------------------------------------------------------------------ #
-        # Matrices — must be C-contiguous for the driver pointer             #
-        # ------------------------------------------------------------------ #
         elif gl_type == GL.GL_FLOAT_MAT2:
             mat = ensure_contiguity(np.asarray(value, np.float32))
             GL.glUniformMatrix2fv(location, 1, GL.GL_FALSE, mat)
@@ -521,21 +481,18 @@ class UniformManager:
         # how to handle it.
         error = GL.glGetError()
         if error != GL.GL_NO_ERROR:
-            raise GLError("glUniform* error 0x%x at location %d" % (error, location))
+            raise GLError(
+                "glUniform* error 0x%x at location %d" % (error, location))
 
         return True
-
-    # ------------------------------------------------------------------
-    # Introspection
-    # ------------------------------------------------------------------
 
     def _introspect_uniforms(self) -> dict[str, dict[str, Any]]:
         """
         Query all active uniforms from the program via ``glGetActiveUniform``.
 
-        Called once during :meth:`register_uniforms` when ``introspect=True``.
+        Called once during `register_uniforms` when ``introspect=True``.
         The result is used to populate the type cache so that
-        :meth:`_set_by_loc_and_type` can dispatch correctly without an
+        `_set_by_loc_and_type` can dispatch correctly without an
         explicit type argument.
 
         Returns:
@@ -554,15 +511,11 @@ class UniformManager:
             clean_name = name.split("[")[0]
             uniform_info[clean_name] = {
                 "index": i,
-                "type":  GLenum(type_),
-                "size":  GLint(size),
+                "type": GLenum(type_),
+                "size": GLint(size),
             }
 
         return uniform_info
-
-    # ------------------------------------------------------------------
-    # Type inference and naming helpers
-    # ------------------------------------------------------------------
 
     @staticmethod
     def _infer_type(value: Any) -> GLenum:
@@ -587,7 +540,6 @@ class UniformManager:
         ``ndarray`` / ``list`` shape ``(3,)``    ``GL_FLOAT_VEC3``
         ``ndarray`` / ``list`` shape ``(2,)``    ``GL_FLOAT_VEC2``
         Anything else                            ``GL_FLOAT`` (safe default)
-        =======================================  ==============
 
         Args:
             value: The Python value to classify.
@@ -610,9 +562,9 @@ class UniformManager:
                 (4, 4): GL.GL_FLOAT_MAT4,
                 (3, 3): GL.GL_FLOAT_MAT3,
                 (2, 2): GL.GL_FLOAT_MAT2,
-                (4,):   GL.GL_FLOAT_VEC4,
-                (3,):   GL.GL_FLOAT_VEC3,
-                (2,):   GL.GL_FLOAT_VEC2,
+                (4,): GL.GL_FLOAT_VEC4,
+                (3,): GL.GL_FLOAT_VEC3,
+                (2,): GL.GL_FLOAT_VEC2,
             }
             return GLenum(shape_map.get(arr.shape, GL.GL_FLOAT))
 
@@ -632,38 +584,34 @@ class UniformManager:
             The GLSL type keyword string, or ``"0x<hex>"`` for unknown tokens.
         """
         _NAMES: dict[int, str] = {
-            GL.GL_FLOAT:        "float",
-            GL.GL_FLOAT_VEC2:   "vec2",
-            GL.GL_FLOAT_VEC3:   "vec3",
-            GL.GL_FLOAT_VEC4:   "vec4",
-            GL.GL_INT:          "int",
-            GL.GL_INT_VEC2:     "ivec2",
-            GL.GL_INT_VEC3:     "ivec3",
-            GL.GL_INT_VEC4:     "ivec4",
+            GL.GL_FLOAT: "float",
+            GL.GL_FLOAT_VEC2: "vec2",
+            GL.GL_FLOAT_VEC3: "vec3",
+            GL.GL_FLOAT_VEC4: "vec4",
+            GL.GL_INT: "int",
+            GL.GL_INT_VEC2: "ivec2",
+            GL.GL_INT_VEC3: "ivec3",
+            GL.GL_INT_VEC4: "ivec4",
             GL.GL_UNSIGNED_INT: "uint",
-            GL.GL_BOOL:         "bool",
-            GL.GL_BOOL_VEC2:    "bvec2",
-            GL.GL_BOOL_VEC3:    "bvec3",
-            GL.GL_BOOL_VEC4:    "bvec4",
-            GL.GL_FLOAT_MAT2:   "mat2",
-            GL.GL_FLOAT_MAT3:   "mat3",
-            GL.GL_FLOAT_MAT4:   "mat4",
-            GL.GL_SAMPLER_1D:   "sampler1D",
-            GL.GL_SAMPLER_2D:   "sampler2D",
-            GL.GL_SAMPLER_3D:   "sampler3D",
+            GL.GL_BOOL: "bool",
+            GL.GL_BOOL_VEC2: "bvec2",
+            GL.GL_BOOL_VEC3: "bvec3",
+            GL.GL_BOOL_VEC4: "bvec4",
+            GL.GL_FLOAT_MAT2: "mat2",
+            GL.GL_FLOAT_MAT3: "mat3",
+            GL.GL_FLOAT_MAT4: "mat4",
+            GL.GL_SAMPLER_1D: "sampler1D",
+            GL.GL_SAMPLER_2D: "sampler2D",
+            GL.GL_SAMPLER_3D: "sampler3D",
             GL.GL_SAMPLER_CUBE: "samplerCube",
         }
         return _NAMES.get(int(gl_type), "0x%x" % gl_type)
-
-    # ------------------------------------------------------------------
-    # Internal error check
-    # ------------------------------------------------------------------
 
     def _check_gl_error(self, operation: str) -> None:
         """
         Drain one error from the GL queue and raise if non-zero.
 
-        Called at the bookend of :meth:`register_uniforms` to verify that
+        Called at the bookend of `register_uniforms` to verify that
         the program bind and unbind operations succeeded.
 
         Args:

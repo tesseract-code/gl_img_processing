@@ -1,4 +1,6 @@
 """
+type.py
+=============
 PyOpenGL type definitions for 2D image processing.
 
 Provides semantic type aliases for static analysis and IDE support.
@@ -23,10 +25,6 @@ __all__ = [
     "GLFramebuffer",
 ]
 
-# ============================================================================
-# ENUMERATIONS & CONSTANTS
-# ============================================================================
-
 GLenum = NewType("GLenum", int)
 """OpenGL enumeration constant (GL_TEXTURE_2D, GL_RGBA, GL_PIXEL_UNPACK_BUFFER, etc.).
 
@@ -44,10 +42,6 @@ GLbitfield = NewType("GLbitfield", int)
 Example:
     >>> glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
 """
-
-# ============================================================================
-# NUMERIC TYPES
-# ============================================================================
 
 GLfloat = NewType("GLfloat", float)
 """32-bit floating point for coordinates, colors, and matrix values.
@@ -73,10 +67,6 @@ GLubyte = NewType("GLubyte", int)
 Example:
     >>> pixels: list[GLubyte] = [255, 0, 0, 255] * 100  # Red pixels
 """
-
-# ============================================================================
-# SIZE & OFFSET TYPES (Semantic clarity)
-# ============================================================================
 
 GLsizei = NewType("GLsizei", int)
 """Non-negative integer for sizes and counts.
@@ -110,10 +100,6 @@ Example:
     ...     glBufferData(GL_PIXEL_PACK_BUFFER, size, None, GL_STREAM_READ)
     ...     return GLBuffer(buffer)
 """
-
-# ============================================================================
-# RESOURCE HANDLES (Strongly Typed for 2D Image Processing)
-# ============================================================================
 
 GLHandle = NewType("GLHandle", int)
 """Generic OpenGL resource handle (base type for all GPU objects)."""

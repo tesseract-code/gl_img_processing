@@ -1,4 +1,7 @@
-"""OpenGL context and surface configuration utilities for 2D image processing.
+"""
+utils.py
+=============
+OpenGL context and surface configuration utilities for 2D image processing.
 
 Provides safe context management and Qt surface format configuration
 optimized for GPU image processing operations.

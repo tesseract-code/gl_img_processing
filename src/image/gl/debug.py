@@ -1,5 +1,5 @@
 """
-gl_debug.py
+debug.py
 ===========
 OpenGL debug output and diagnostics utilities for PyQt6/PyOpenGL applications.
 
@@ -49,15 +49,8 @@ from PyQt6.QtGui import QOpenGLContext
 from image.gl.backend import GL
 from image.gl.config import GLConfig
 
-# ---------------------------------------------------------------------------
-# Module logger
-# ---------------------------------------------------------------------------
 logger = logging.getLogger(__name__)
 
-
-# ---------------------------------------------------------------------------
-# Internal types
-# ---------------------------------------------------------------------------
 
 class _SeverityMeta(NamedTuple):
     """Pairs a Python ``logging`` level with a human-readable log prefix."""
@@ -65,12 +58,7 @@ class _SeverityMeta(NamedTuple):
     prefix: str
 
 
-# ---------------------------------------------------------------------------
-# Constants
-# ---------------------------------------------------------------------------
-
 # Maps GL debug-severity tokens → (_SeverityMeta).
-# Using a NamedTuple value avoids tuple-unpacking errors on lookup failures.
 _SEVERITY_MAP: dict[int, _SeverityMeta] = {
     GL.GL_DEBUG_SEVERITY_HIGH: _SeverityMeta(logging.ERROR, "[GL ERROR]"),
     GL.GL_DEBUG_SEVERITY_MEDIUM: _SeverityMeta(logging.WARNING, "[GL WARN] "),
@@ -89,10 +77,6 @@ _SEVERITY_MAP: dict[int, _SeverityMeta] = {
 _GL_CALLBACK_REFS: list[Any] = []
 _CALLBACK_LOCK = threading.Lock()
 
-
-# ---------------------------------------------------------------------------
-# Internal helpers
-# ---------------------------------------------------------------------------
 
 def _decode_gl_message(raw: bytes | Any) -> str:
     """

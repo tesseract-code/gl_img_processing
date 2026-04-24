@@ -1,4 +1,6 @@
 """
+config.py
+=============
 Immutable GL configuration presets and runtime capability validation.
 
 Defines GLConfig, a frozen dataclass that captures all knobs controlling
@@ -29,7 +31,7 @@ class GLConfig:
 
     All fields default to the most conservative (lowest-requirement) value so
     that a plain ``GLConfig()`` is always safe to construct before the GL
-    context version is known.  Call :func:`validate` once the context is live
+    context version is known.  Call `validate` once the context is live
     to confirm that the chosen flags are supported.
 
     Attributes:

@@ -1,5 +1,5 @@
 """
-gl_quad.py
+quad.py
 ==========
 Fullscreen quad geometry management for PyOpenGL render pipelines.
 
@@ -44,9 +44,9 @@ from typing import Optional
 
 import numpy as np
 
-from pycore.log.ctx import with_logger
 from image.gl.backend import GL
 from image.gl.errors import GLError
+from pycore.log.ctx import with_logger
 
 __all__ = ["GeometryManager"]
 
@@ -74,17 +74,13 @@ class GeometryManager:
         ebo: EBO handle, or ``None`` before :meth:`initialize` succeeds.
     """
 
-    # -----------------------------------------------------------------------
-    # Geometry data (class-level, shared across all instances)
-    # -----------------------------------------------------------------------
-
     # Each row: X  Y  Z  U  V
     VERTICES: np.ndarray = np.array(
         [
-            -1.0, -1.0, 0.0,  0.0, 0.0,   # bottom-left
-             1.0, -1.0, 0.0,  1.0, 0.0,   # bottom-right
-             1.0,  1.0, 0.0,  1.0, 1.0,   # top-right
-            -1.0,  1.0, 0.0,  0.0, 1.0,   # top-left
+            -1.0, -1.0, 0.0, 0.0, 0.0,  # bottom-left
+            1.0, -1.0, 0.0, 1.0, 0.0,  # bottom-right
+            1.0, 1.0, 0.0, 1.0, 1.0,  # top-right
+            -1.0, 1.0, 0.0, 0.0, 1.0,  # top-left
         ],
         dtype=np.float32,
     )
@@ -94,10 +90,10 @@ class GeometryManager:
     INDICES: np.ndarray = np.array([0, 1, 2, 2, 3, 0], dtype=np.uint32)
 
     # Vertex layout constants derived from VERTICES structure.
-    _COMPONENTS_PER_VERTEX = 5               # position(3) + texcoord(2)
-    _STRIDE = _COMPONENTS_PER_VERTEX * _FLOAT_BYTES   # 20 bytes
-    _POSITION_OFFSET  = 0                    # bytes from start of vertex
-    _TEXCOORD_OFFSET  = 3 * _FLOAT_BYTES     # 12 bytes (after 3 position floats)
+    _COMPONENTS_PER_VERTEX = 5  # position(3) + texcoord(2)
+    _STRIDE = _COMPONENTS_PER_VERTEX * _FLOAT_BYTES  # 20 bytes
+    _POSITION_OFFSET = 0  # bytes from start of vertex
+    _TEXCOORD_OFFSET = 3 * _FLOAT_BYTES  # 12 bytes (after 3 position floats)
 
     __slots__ = ("vao", "vbo", "ebo")
 
@@ -105,10 +101,6 @@ class GeometryManager:
         self.vao: Optional[int] = None
         self.vbo: Optional[int] = None
         self.ebo: Optional[int] = None
-
-    # -----------------------------------------------------------------------
-    # Initialisation
-    # -----------------------------------------------------------------------
 
     def initialize(self) -> bool:
         """
@@ -135,13 +127,15 @@ class GeometryManager:
         try:
             self.vao = GL.glGenVertexArrays(1)
             if self.vao == 0:
-                self._logger.error("glGenVertexArrays returned 0 — VAO creation failed")
+                self._logger.error(
+                    "glGenVertexArrays returned 0 — VAO creation failed")
                 return False
 
             self.vbo = GL.glGenBuffers(1)
             self.ebo = GL.glGenBuffers(1)
             if self.vbo == 0 or self.ebo == 0:
-                self._logger.error("glGenBuffers returned 0 — buffer creation failed")
+                self._logger.error(
+                    "glGenBuffers returned 0 — buffer creation failed")
                 self.cleanup()
                 return False
 
@@ -173,22 +167,22 @@ class GeometryManager:
             # Attribute 0 — position (vec3)
             GL.glEnableVertexAttribArray(0)
             GL.glVertexAttribPointer(
-                0,                                       # layout location
-                3,                                       # component count
-                GL.GL_FLOAT,                             # element type
-                GL.GL_FALSE,                             # normalise
-                self._STRIDE,                            # stride in bytes
+                0,  # layout location
+                3,  # component count
+                GL.GL_FLOAT,  # element type
+                GL.GL_FALSE,  # normalise
+                self._STRIDE,  # stride in bytes
                 ctypes.c_void_p(self._POSITION_OFFSET),  # byte offset
             )
 
             # Attribute 1 — texture coordinate (vec2)
             GL.glEnableVertexAttribArray(1)
             GL.glVertexAttribPointer(
-                1,                                       # layout location
-                2,                                       # component count
-                GL.GL_FLOAT,                             # element type
-                GL.GL_FALSE,                             # normalise
-                self._STRIDE,                            # stride in bytes
+                1,  # layout location
+                2,  # component count
+                GL.GL_FLOAT,  # element type
+                GL.GL_FALSE,  # normalise
+                self._STRIDE,  # stride in bytes
                 ctypes.c_void_p(self._TEXCOORD_OFFSET),  # byte offset
             )
 
@@ -211,10 +205,6 @@ class GeometryManager:
             self._logger.error("Geometry initialisation failed: %s", e)
             self.cleanup()
             return False
-
-    # -----------------------------------------------------------------------
-    # Render interface
-    # -----------------------------------------------------------------------
 
     def bind(self) -> None:
         """
@@ -255,10 +245,6 @@ class GeometryManager:
             ctypes.c_void_p(0),  # offset 0 into the bound EBO
         )
 
-    # -----------------------------------------------------------------------
-    # Context manager  (bind / unbind scope)
-    # -----------------------------------------------------------------------
-
     def __enter__(self) -> "GeometryManager":
         """Bind the VAO on entry."""
         self.bind()
@@ -267,10 +253,6 @@ class GeometryManager:
     def __exit__(self, exc_type, exc_val, exc_tb) -> None:
         """Unbind the VAO on exit, even if the block raised."""
         self.unbind()
-
-    # -----------------------------------------------------------------------
-    # Cleanup
-    # -----------------------------------------------------------------------
 
     def cleanup(self) -> None:
         """

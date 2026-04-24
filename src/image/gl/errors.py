@@ -1,5 +1,5 @@
 """
-gl_errors.py
+errors.py
 ============
 OpenGL exception hierarchy, error-code mapping, and a context manager for
 safe, structured GL error checking with detailed logging.
@@ -29,10 +29,6 @@ __all__ = [
 
 logger = logging.getLogger(__name__)
 
-
-# ---------------------------------------------------------------------------
-# Error-code mapping
-# ---------------------------------------------------------------------------
 
 def _build_error_code_map() -> dict[int, str]:
     """
@@ -72,13 +68,8 @@ def _build_error_code_map() -> dict[int, str]:
 
 
 # Maps GL error-code integers to their canonical ``GL_*`` string names.
-# Built once at import time; safe to treat as read-only thereafter.
 GL_ERROR_CODES: dict[int, str] = _build_error_code_map()
 
-
-# ---------------------------------------------------------------------------
-# Exception hierarchy
-# ---------------------------------------------------------------------------
 
 class GLError(Exception):
     """
@@ -156,12 +147,12 @@ def gl_error_check(
     """
     Context manager that drains the GL error queue after a block of GL calls.
 
-    Usage::
+    Usage:
 
         with gl_error_check("texture upload", GLTextureError):
             GL.glTexImage2D(...)
 
-    Behaviour
+    Behavior
     ---------
     * When ``GLConfig.CHECK_GL_ERRORS`` is ``False`` the block executes with
       zero overhead and no logging — disabled error checking in a production

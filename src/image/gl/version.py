@@ -1,5 +1,5 @@
 """
-gl_version.py
+version.py
 =============
 Utilities for querying and inspecting the active OpenGL context version.
 
@@ -36,10 +36,6 @@ _MIN_GL_MAJOR = 4
 _MIN_GL_MINOR = 1
 
 
-# ---------------------------------------------------------------------------
-# Public types
-# ---------------------------------------------------------------------------
-
 class OpenGLInfo(TypedDict):
     """
     Structured snapshot of the active OpenGL context's identity strings.
@@ -64,10 +60,6 @@ class OpenGLInfo(TypedDict):
     shading_lang_version: str
 
 
-# ---------------------------------------------------------------------------
-# Internal helpers
-# ---------------------------------------------------------------------------
-
 def _decode_gl_string(enum_val: int) -> str:
     """
     Query a ``glGetString`` enum and return a decoded Python ``str``.
@@ -91,10 +83,6 @@ def _decode_gl_string(enum_val: int) -> str:
 # Compiled once at import time; matches "4.1", "4.1.0", "4.1 NVIDIA …" etc.
 _VERSION_RE = re.compile(r"^(\d+)\.(\d+)")
 
-
-# ---------------------------------------------------------------------------
-# Public API
-# ---------------------------------------------------------------------------
 
 def get_gl_version() -> tuple[int, int]:
     """
@@ -136,7 +124,8 @@ def get_gl_version() -> tuple[int, int]:
 
     major = int(match.group(1))
     minor = int(match.group(2))
-    logger.debug("OpenGL version detected: %d.%d (raw: %r)", major, minor, version_str)
+    logger.debug("OpenGL version detected: %d.%d (raw: %r)", major, minor,
+                 version_str)
     return major, minor
 
 
@@ -167,12 +156,13 @@ def get_gl_info() -> OpenGLInfo:
     major, minor = get_gl_version()
 
     info: OpenGLInfo = {
-        "major":                major,
-        "minor":                minor,
-        "version_str":          _decode_gl_string(GL.GL_VERSION),
-        "vendor":               _decode_gl_string(GL.GL_VENDOR),
-        "renderer":             _decode_gl_string(GL.GL_RENDERER),
-        "shading_lang_version": _decode_gl_string(GL.GL_SHADING_LANGUAGE_VERSION),
+        "major": major,
+        "minor": minor,
+        "version_str": _decode_gl_string(GL.GL_VERSION),
+        "vendor": _decode_gl_string(GL.GL_VENDOR),
+        "renderer": _decode_gl_string(GL.GL_RENDERER),
+        "shading_lang_version": _decode_gl_string(
+            GL.GL_SHADING_LANGUAGE_VERSION),
     }
 
     logger.info(
@@ -187,8 +177,8 @@ def get_gl_info() -> OpenGLInfo:
 
 
 def check_minimum_version(
-    required_major: int = _MIN_GL_MAJOR,
-    required_minor: int = _MIN_GL_MINOR,
+        required_major: int = _MIN_GL_MAJOR,
+        required_minor: int = _MIN_GL_MINOR,
 ) -> tuple[int, int]:
     """
     Assert that the active context meets the minimum required GL version.
@@ -215,7 +205,7 @@ def check_minimum_version(
         major, minor = check_minimum_version()
         logger.info("GL version OK: %d.%d", major, minor)
     """
-    major, minor = get_gl_version()   # raises GLInitializationError on failure
+    major, minor = get_gl_version()  # raises GLInitializationError on failure
 
     # Compare as a tuple so (4, 2) > (4, 1) and (5, 0) > (4, 1) both hold.
     if (major, minor) < (required_major, required_minor):

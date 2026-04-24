@@ -29,7 +29,6 @@ from PyQt6.QtGui import QImage
 from PyQt6.QtOpenGLWidgets import QOpenGLWidget
 from PyQt6.QtWidgets import QWidget
 
-
 from image.gl.backend import GL, initialize_context
 from image.gl.errors import (
     GLError,
@@ -42,7 +41,6 @@ from image.gl.format import get_gl_texture_spec
 from image.gl.pbo import PBOBufferingStrategy, PBOUploadManager, \
     configure_pixel_storage, memmove_pbo, write_pbo_buffer
 from image.gl.pbo.bridge import QtPBOBridge
-
 from image.gl.program import ShaderProgramManager
 from image.gl.quad import GeometryManager
 from image.gl.shaders.paths import (
@@ -63,7 +61,7 @@ from image.gl.types import (GLenum, GLbitfield,
 from image.gl.uniform import (
     UniformManager,
     UniformType,
-    FragmentShaderUniforms,
+    FragmentShaderUniforms, VertexShaderUniforms,
 )
 from image.gl.utils import gl_context
 from image.gl.viewport import ViewManager
@@ -82,10 +80,6 @@ from qtcore.reference import has_qt_cpp_binding
 
 logger = ContextAdapter(logging.getLogger(__name__), {})
 
-
-# ---------------------------------------------------------------------------
-# GL state tracker
-# ---------------------------------------------------------------------------
 
 @dataclass(slots=True, frozen=False)
 class GLState:
@@ -119,10 +113,6 @@ class GLState:
         self.active_texture_unit = GLenum(GL.GL_TEXTURE0)
         self.initialized = False
 
-
-# ---------------------------------------------------------------------------
-# Widget
-# ---------------------------------------------------------------------------
 
 class GLFrameViewer(QOpenGLWidget):
     """
@@ -227,10 +217,6 @@ class GLFrameViewer(QOpenGLWidget):
             monitoring=monitor_performance,
         )
 
-    # ------------------------------------------------------------------
-    # Properties
-    # ------------------------------------------------------------------
-
     @property
     def data(self) -> Optional[np.ndarray]:
         """Current frame data (read-only reference)."""
@@ -258,9 +244,6 @@ class GLFrameViewer(QOpenGLWidget):
         """``True`` after :meth:`initializeGL` has completed successfully."""
         return self._gl_state.initialized
 
-    # ------------------------------------------------------------------
-    # Qt GL overrides
-    # ------------------------------------------------------------------
     def initializeGL(self) -> None:
         """
         Set up all OpenGL resources for this widget.
@@ -299,6 +282,9 @@ class GLFrameViewer(QOpenGLWidget):
             if not self._program_manager.is_valid:
                 raise GLInitializationError("Failed to create shader program")
 
+            self._program_manager.uniform_manager.register_members(
+                VertexShaderUniforms
+            )
             self._program_manager.uniform_manager.register_members(
                 FragmentShaderUniforms
             )
@@ -408,7 +394,6 @@ class GLFrameViewer(QOpenGLWidget):
                     self._cleanup_texture_bindings()
                     self._pbo_download_bridge.capture_now()
 
-
             self._gl_state.program_active = None
 
         except GLTextureError as e:
@@ -424,10 +409,6 @@ class GLFrameViewer(QOpenGLWidget):
             msg = f"Unexpected render error: {e}"
             logger.error(msg, exception_type=type(e).__name__)
             self.glError.emit(msg)
-
-    # ------------------------------------------------------------------
-    # Render-readiness guards
-    # ------------------------------------------------------------------
 
     def _can_render(self) -> bool:
         """
@@ -459,10 +440,6 @@ class GLFrameViewer(QOpenGLWidget):
         if not self.isVisible():
             return False, "Widget is not visible"
         return True, None
-
-    # ------------------------------------------------------------------
-    # Texture binding helpers
-    # ------------------------------------------------------------------
 
     def _bind_image_texture(self) -> None:
         """
@@ -572,10 +549,6 @@ class GLFrameViewer(QOpenGLWidget):
             self._gl_state.active_texture_unit = GLenum(GL.GL_TEXTURE0)
         except Exception as e:
             logger.warning("Failed to clean up texture bindings", error=str(e))
-
-    # ------------------------------------------------------------------
-    # Texture allocation
-    # ------------------------------------------------------------------
 
     def _set_sampling_mode(self) -> None:
         """
@@ -709,10 +682,6 @@ class GLFrameViewer(QOpenGLWidget):
             )
 
         return should_realloc
-
-    # ------------------------------------------------------------------
-    # Upload pipeline
-    # ------------------------------------------------------------------
 
     def _upload_image_texture(self, payload: TextureUploadPayload) -> None:
         """
@@ -860,10 +829,6 @@ class GLFrameViewer(QOpenGLWidget):
             self._latest_payload = None
             self._pending_frame_update = False
 
-    # ------------------------------------------------------------------
-    # Colormap
-    # ------------------------------------------------------------------
-
     def _set_colormap(self) -> None:
         """
         Fetch the active colormap LUT and upload it to the GPU.
@@ -894,10 +859,6 @@ class GLFrameViewer(QOpenGLWidget):
             msg = f"Unexpected error updating colormap: {e}"
             logger.error(msg, exception_type=type(e).__name__)
             self.glError.emit(msg)
-
-    # ------------------------------------------------------------------
-    # Uniforms
-    # ------------------------------------------------------------------
 
     def _set_norm_uniforms(
             self,
@@ -963,14 +924,14 @@ class GLFrameViewer(QOpenGLWidget):
             locs = um.locs
 
             um.set_fast(
-                location=getattr(locs,
-                                 FragmentShaderUniforms.TRANSFORM_MATRIX),
+                location=getattr(locs, VertexShaderUniforms.TRANSFORM_MATRIX),
+                # ← vertex
                 value=u_transform,
                 uniform_type=UniformType.MAT4,
             )
             um.set_fast(
-                location=getattr(locs,
-                                 FragmentShaderUniforms.PROJECTION_MATRIX),
+                location=getattr(locs, VertexShaderUniforms.PROJECTION_MATRIX),
+                # ← vertex
                 value=u_projection,
                 uniform_type=UniformType.MAT4,
             )
@@ -1050,10 +1011,6 @@ class GLFrameViewer(QOpenGLWidget):
                     uniform_type=UniformType.INT,
                 )
 
-    # ------------------------------------------------------------------
-    # View sync
-    # ------------------------------------------------------------------
-
     def _sync_view_to_settings(self) -> None:
         """Persist the current ViewManager state back into :attr:`settings`."""
         self.settings.update_setting("zoom", self._view_manager.zoom_level)
@@ -1070,7 +1027,6 @@ class GLFrameViewer(QOpenGLWidget):
         self._view_manager.pan_y = self.settings.pan_y
         self._view_manager.handle_rotation(np.degrees(self.settings.rotation))
         self._view_manager.update_transform()
-        self.update()
 
     @pyqtSlot()
     def _on_settings_changed(self) -> None:
@@ -1081,10 +1037,6 @@ class GLFrameViewer(QOpenGLWidget):
             if self.settings.colormap_enabled:
                 self._set_colormap()
             self.update()
-
-    # ------------------------------------------------------------------
-    # Public view controls
-    # ------------------------------------------------------------------
 
     def fit_to_viewport(self) -> None:
         """Scale and centre the image to fill the current viewport."""

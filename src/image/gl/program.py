@@ -1,11 +1,11 @@
 """
-gl_program.py
+program.py
 =============
 Shader compilation, linking, and program management for PyOpenGL pipelines.
 
 Provides both low-level free functions for compiling and linking individual
-shaders and a :class:`ShaderProgramManager` that owns the program handle and
-its associated :class:`~image.gl.uniform.UniformManager`.
+shaders and a `ShaderProgramManager` that owns the program handle and
+its associated `~image.gl.uniform.UniformManager`.
 
 Error strategy
 --------------
@@ -53,10 +53,6 @@ __all__ = [
 
 logger = logging.getLogger(__name__)
 
-
-# ---------------------------------------------------------------------------
-# Compilation
-# ---------------------------------------------------------------------------
 
 def compile_shader(
         source: str,
@@ -113,7 +109,7 @@ def compile_shader(
         GL.glDeleteShader(shader)
         raise GLShaderError(
             "%s shader compilation failed (%s):\n%s" % (
-            stage_name, path or "<source>", error_log)
+                stage_name, path or "<source>", error_log)
         )
 
     # Compilation succeeded.  Some drivers still populate the info log with
@@ -130,10 +126,6 @@ def compile_shader(
 
     return GLuint(shader)
 
-
-# ---------------------------------------------------------------------------
-# Linking
-# ---------------------------------------------------------------------------
 
 def link_program(
         vertex_shader: GLuint,
@@ -195,10 +187,6 @@ def link_program(
 
     return GLuint(program)
 
-
-# ---------------------------------------------------------------------------
-# High-level creation
-# ---------------------------------------------------------------------------
 
 def create_program(
         vertex_path: Union[str, Path],
@@ -276,10 +264,6 @@ def create_program(
     return program
 
 
-# ---------------------------------------------------------------------------
-# Validation (diagnostic only)
-# ---------------------------------------------------------------------------
-
 def validate_program(program: Optional[GLuint]) -> tuple[bool, Optional[str]]:
     """
     Run ``glValidateProgram`` against the current GL draw state.
@@ -325,10 +309,6 @@ def validate_program(program: Optional[GLuint]) -> tuple[bool, Optional[str]]:
     return False, error_log
 
 
-# ---------------------------------------------------------------------------
-# Deletion
-# ---------------------------------------------------------------------------
-
 def delete_program(program: Optional[GLuint]) -> None:
     """
     Delete a program object and release its GPU resources.
@@ -342,10 +322,6 @@ def delete_program(program: Optional[GLuint]) -> None:
     if program:
         GL.glDeleteProgram(program)
 
-
-# ---------------------------------------------------------------------------
-# Uniform setter (standalone utility)
-# ---------------------------------------------------------------------------
 
 def set_uniform(
         program: GLuint,
@@ -455,10 +431,6 @@ def set_uniform(
         GL.glUseProgram(0)
 
 
-# ---------------------------------------------------------------------------
-# Program manager
-# ---------------------------------------------------------------------------
-
 class ShaderProgramManager:
     """
     Owns a single compiled and linked OpenGL program and its uniform interface.
@@ -467,7 +439,7 @@ class ShaderProgramManager:
     deletion via :func:`delete_program`) and exposes the program as a context
     manager for scoped binding.
 
-    The associated :class:`~image.gl.uniform.UniformManager`
+    The associated `~image.gl.uniform.UniformManager`
     is created alongside the program and shares its lifetime.  Access it via
     :attr:`uniform_manager` or use :meth:`batch_update_uniforms` to update
     multiple uniforms while the program is bound.
@@ -484,10 +456,6 @@ class ShaderProgramManager:
         self._program_id: GLuint = GLuint(0)
         self._uniform_manager: Optional[UniformManager] = None
 
-    # ------------------------------------------------------------------
-    # Properties
-    # ------------------------------------------------------------------
-
     @property
     def handle(self) -> GLuint:
         """The raw OpenGL program handle. ``0`` when uninitialised."""
@@ -501,14 +469,10 @@ class ShaderProgramManager:
     @property
     def uniform_manager(self) -> Optional[UniformManager]:
         """
-        The :class:`~image.gl.uniform.UniformManager`
+        The `~image.gl.uniform.UniformManager`
         bound to this program, or ``None`` before :meth:`initialize` is called.
         """
         return self._uniform_manager
-
-    # ------------------------------------------------------------------
-    # Lifecycle
-    # ------------------------------------------------------------------
 
     def initialize(
             self,
@@ -577,14 +541,10 @@ class ShaderProgramManager:
         """Unbind the program unconditionally, even if the block raised."""
         GL.glUseProgram(0)
 
-    # ------------------------------------------------------------------
-    # Batch uniform update
-    # ------------------------------------------------------------------
-
     @contextmanager
     def batch_update_uniforms(self) -> Iterator[UniformManager]:
         """
-        Bind the program and yield the :class:`UniformManager` for bulk updates.
+        Bind the program and yield the `UniformManager` for bulk updates.
 
         Keeps ``glUseProgram`` active across all uniform writes in the block,
         avoiding the repeated bind/unbind overhead of calling
@@ -597,7 +557,7 @@ class ShaderProgramManager:
                 um.set_fast(location=um.locs.COLOR, value=color, uniform_type=UniformType.VEC3)
 
         Yields:
-            The :class:`~image.gl.uniform.UniformManager`
+            The `~image.gl.uniform.UniformManager`
             associated with this program.
 
         Raises:

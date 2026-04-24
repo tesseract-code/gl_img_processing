@@ -1,20 +1,20 @@
 """
-gl_backend.py
+backend.py
 =============
-OpenGL backend configuration and context initialisation.
+OpenGL backend configuration and context initialization.
 
 Applies PyOpenGL performance and correctness flags (``ERROR_CHECKING``,
 ``ERROR_LOGGING``, ``ERROR_ON_COPY``) before any GL import, then exposes a
 ``GLConfig`` singleton that is populated with runtime-detected capabilities
-by :func:`initialize_context`.
+by `initialize_context`.
 
 Usage
 -----
-Call :func:`initialize_context` exactly once after the OpenGL context and
+Call `initialize_context` exactly once after the OpenGL context and
 window have been created.  All other modules should import ``GL``, ``GLU``,
 and config from here rather than importing PyOpenGL directly::
 
-    from gl_backend import GL, GLU, GL_CONFIGS, initialize_context
+    from image.gl.backend import GL, GLU, GL_CONFIGS, initialize_context
 
     initialize_context()   # call once at startup
 
@@ -25,7 +25,7 @@ Environment
 -----------
 ``GL_DEBUG_MODE``
     Set to ``"1"`` to enable PyOpenGL error checking, error logging, and the
-    KHR_debug callback via :func:`enable_gl_debug_output`.  Defaults to
+    KHR_debug callback via `enable_gl_debug_output`.  Defaults to
     ``"0"``.  Has no effect on macOS, where the Apple GL stack does not
     support KHR_debug callbacks.
 
@@ -43,7 +43,7 @@ from image.gl.config import GL_CONFIGS, GLConfig
 
 # Warn if PyOpenGL was imported before this module had a chance to set the
 # ERROR_CHECKING / ERROR_LOGGING flags.  Once GL is imported those flags are
-# read and baked in — setting them afterwards has no effect.
+# read and baked in — setting them afterward has no effect.
 if "OpenGL.GL" in sys.modules:
     logging.getLogger(__name__).warning(
         "OpenGL.GL was imported before GLConfig could apply optimizations. "
@@ -62,7 +62,7 @@ if _DEBUG_ENV:
     # glGetError drain; ERROR_LOGGING routes those errors through Python's
     # logging system rather than printing to stderr.
     OpenGL.ERROR_CHECKING = True
-    OpenGL.ERROR_LOGGING = True    # FIX: was missing — test correctly required this
+    OpenGL.ERROR_LOGGING = True
 else:
     # Disable in non-debug builds to eliminate per-call glGetError overhead.
     OpenGL.ERROR_CHECKING = False
@@ -96,7 +96,7 @@ def initialize_context() -> None:
     Side effects
     ------------
     On non-macOS platforms with ``GL_DEBUG_MODE=1``, calls
-    :func:`~cross_platform.qt6_utils.image.gl.debug.enable_gl_debug_output`
+    `~image.gl.debug.enable_gl_debug_output`
     after the config is written so the KHR_debug callback is active for all
     subsequent GL calls.
     """

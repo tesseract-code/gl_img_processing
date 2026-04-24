@@ -1,9 +1,9 @@
 """
-gl_format.py
+format.py
 ============
 OpenGL texture format resolution for PyOpenGL/NumPy image pipelines.
 
-Maps :class:`~cross_platform.qt6_utils.image.settings.pixels.PixelFormat`
+Maps 'image.settings.pixels.PixelFormat`
 enum members and NumPy dtype strings to the three GL token tuple required by
 ``glTexImage2D`` / ``glTexSubImage2D``:
 
@@ -27,7 +27,7 @@ Planar YUV formats (YUV420, YUV422, NV12, NV21)
 These are multi-plane formats that cannot be fully represented as a single
 ``GL_TEXTURE_2D``.  They are mapped to ``GL_RED`` (luma plane only) as a
 best-effort approximation.  Callers that need correct chroma reproduction
-must convert to RGB/RGBA on the CPU before calling :func:`get_gl_texture_spec`.
+must convert to RGB/RGBA on the CPU before calling `get_gl_texture_spec`.
 """
 
 from __future__ import annotations
@@ -49,18 +49,10 @@ __all__ = [
 
 logger = logging.getLogger(__name__)
 
-# ---------------------------------------------------------------------------
-# Public types
-# ---------------------------------------------------------------------------
-
 #: The three-token tuple consumed by ``glTexImage2D`` and ``glTexSubImage2D``:
 #: ``(gl_format, gl_internal_format, gl_type)``.
 GLTextureSpec: TypeAlias = tuple[int, int, int]
 
-
-# ---------------------------------------------------------------------------
-# Internal resolution helpers (cached)
-# ---------------------------------------------------------------------------
 
 @lru_cache(maxsize=32)
 def _resolve_gl_dtype_params(dtype_name: str) -> tuple[int, str]:
@@ -186,8 +178,8 @@ def _resolve_gl_format_base(fmt_name: str) -> tuple[int, str]:
 
 @lru_cache(maxsize=128)
 def get_gl_texture_spec(
-    fmt: PixelFormat | str,
-    dtype: Union[str, np.dtype, type],
+        fmt: PixelFormat | str,
+        dtype: Union[str, np.dtype, type],
 ) -> GLTextureSpec:
     """
     Resolve the complete OpenGL texture parameter triple for an image upload.
@@ -287,7 +279,8 @@ def get_gl_texture_spec(
             "GL internal format %r (derived from fmt=%r, dtype=%r) is not "
             "available in the current driver/profile.  Consider using a "
             "different dtype (e.g. float32 instead of int16) or converting "
-            "the image on the CPU before upload." % (internal_attr, fmt_name, dtype_str)
+            "the image on the CPU before upload." % (internal_attr, fmt_name,
+                                                     dtype_str)
         )
 
     logger.debug(
