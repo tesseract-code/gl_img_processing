@@ -3,12 +3,12 @@ gl_viewport.py
 ==============
 View transformation management for pixel-perfect image rendering.
 
-:class:`ViewManager` owns the two matrices consumed by the image shader:
+`ViewManager` owns the two matrices consumed by the image shader:
 
 * **projection** — orthographic, maps pixel coordinates to normalized device
-  coordinates (NDC).  Rebuilt on every :meth:`~ViewManager.handle_resize`.
+  coordinates (NDC).  Rebuilt on every `~ViewManager.handle_resize`.
 * **transform** — encodes pan, zoom, and rotation applied to the fullscreen
-  quad.  Rebuilt on every state change via :meth:`~ViewManager.update_transform`.
+  quad.  Rebuilt on every state change via `~ViewManager.update_transform`.
 
 Coordinate conventions
 -----------------------
@@ -16,8 +16,8 @@ Coordinate conventions
 * Pan and zoom-center arguments are expressed in **viewport pixel units**.
 * Rotation is stored and accepted in **degrees**.
 * ``QMatrix4x4.data()`` returns elements in **column-major** order.
-  :meth:`~ViewManager.get_projection_data` and
-  :meth:`~ViewManager.get_transform_data` return the data as a flat
+  `~ViewManager.get_projection_data` and
+  `~ViewManager.get_transform_data` return the data as a flat
   ``(16,)`` ``float32`` array in that same column-major layout, which is
   what ``glUniformMatrix4fv(..., GL_FALSE, ...)`` expects.
 
@@ -63,9 +63,9 @@ class ViewManager:
     Maintains user-controlled pan, zoom, and rotation state and rebuilds
     the two GPU matrices whenever any of those values change.
 
-    All matrix data is stored as :class:`~PyQt6.QtGui.QMatrix4x4` internally
+    All matrix data is stored as `~PyQt6.QtGui.QMatrix4x4` internally
     and converted to ``numpy`` arrays on demand by
-    :meth:`get_projection_data` and :meth:`get_transform_data`.
+    `get_projection_data` and `get_transform_data`.
 
     Attributes:
         zoom_level: Current zoom factor (``1.0`` = one image pixel per
@@ -182,7 +182,7 @@ class ViewManager:
         Raises:
             GLInitializationError: If ``factor`` is zero or negative, which
                 would invert or zero the zoom level and leave the view
-                unrecoverable without a :meth:`reset_view` call.
+                unrecoverable without a `reset_view` call.
         """
         if factor <= 0.0:
             raise GLInitializationError(
@@ -302,7 +302,7 @@ class ViewManager:
         """
         Return the transform matrix as a flat ``float32`` array for GPU upload.
 
-        See :meth:`get_projection_data` for the rationale behind returning a
+        See `get_projection_data` for the rationale behind returning a
         flat ``(16,)`` array rather than a ``(4, 4)`` one.
 
         Returns:

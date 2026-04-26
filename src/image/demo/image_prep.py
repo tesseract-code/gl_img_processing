@@ -1,30 +1,22 @@
 import logging
 import sys
 from multiprocessing import set_start_method
-from pathlib import Path
 from typing import Callable, Tuple
 
-import numpy as np
 from PyQt6.QtCore import QThread
 from PyQt6.QtGui import QSurfaceFormat
 from PyQt6.QtWidgets import QMainWindow
 
-from cross_platform.dev.utils.create_image import create_rgb_checkered
-from cross_platform.dev.utils.image_generator import ImageGeneratorWorker
+from image.demo.utils.create_image import create_rgb_checkered
+from image.demo.utils.image_generator import ImageGeneratorWorker
 from image.gl.utils import get_surface_format
 from image.gui.controller.overlay import OverlayImageWidgetController
-from image.io.factory import Backend
-from image.io.load import load_image
 from qtcore.event import run_qt_app
 
 logger = logging.getLogger(__name__)
 
-def load_test_img(shape: tuple, square_size):
-    buf, meta = load_image(Path(r'./img/planet.jpg'),
-                           backend=Backend.PILLOW)
-    return np.flipud(buf.data)
 
-class ImageProcessingWindow(QMainWindow):
+class ImagePrep(QMainWindow):
     def __init__(self,
                  generator_func: Callable = create_rgb_checkered,
                  shape: Tuple[int, int] = (1024, 1024),
@@ -45,7 +37,7 @@ class ImageProcessingWindow(QMainWindow):
             generator_func=generator_func,  # Pass the function ref
             shape=shape,  # Size
             fps=fps,  # Target FPS
-            square_size=64  # Generator specific arg
+            square_size=64  # Generator specific arg,
         )
 
         # Move worker to thread
@@ -69,9 +61,10 @@ class ImageProcessingWindow(QMainWindow):
         self.overlay_view_ctrl.cleanup()
         event.accept()
 
+
 def main():
     set_start_method('spawn', force=True)
-    return sys.exit(run_qt_app(ImageProcessingWindow,))
+    return sys.exit(run_qt_app(ImagePrep, ))
 
 
 if __name__ == '__main__':

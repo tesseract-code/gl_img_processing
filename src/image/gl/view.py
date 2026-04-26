@@ -257,75 +257,79 @@ class GLFrameViewer(QOpenGLWidget):
                 ``gl_error`` signal is emitted before raising so the UI can
                 react without catching the exception itself.
         """
-        logger.debug("Initialising OpenGL context")
+        if not self._gl_state.initialized:
+            logger.debug("Initialising OpenGL context")
 
-        try:
-            initialize_context()
-            GL.glClearColor(GLfloat(0.1), GLfloat(0.1), GLfloat(0.1),
-                            GLfloat(1.0))
+            try:
+                initialize_context()
+                # TODO: find enum issue or keep, clear errors
+                while GL.glGetError() != GL.GL_NO_ERROR:
+                    pass
+                GL.glClearColor(GLfloat(0.1), GLfloat(0.1), GLfloat(0.1),
+                                GLfloat(1.0))
 
-            GL.glEnable(GLenum(GL.GL_BLEND))
-            GL.glBlendFunc(GLenum(GL.GL_SRC_ALPHA),
-                           GLenum(GL.GL_ONE_MINUS_SRC_ALPHA))
-            GL.glEnable(GLenum(GL.GL_FRAMEBUFFER_SRGB))
+                GL.glEnable(GLenum(GL.GL_BLEND))
+                GL.glBlendFunc(GLenum(GL.GL_SRC_ALPHA),
+                               GLenum(GL.GL_ONE_MINUS_SRC_ALPHA))
+                GL.glEnable(GLenum(GL.GL_FRAMEBUFFER_SRGB))
 
-            self._pbo_upload_mngr.initialize()
-            self._pbo_download_bridge = QtPBOBridge(self)
-            self._pbo_download_bridge.initialize()
+                self._pbo_upload_mngr.initialize()
+                self._pbo_download_bridge = QtPBOBridge(self)
+                self._pbo_download_bridge.initialize()
 
-            validate_shader_paths(shaders=IMAGE_SHADERS)
-            self._program_manager.initialize(
-                vertex_path=IMAGE_SHADERS["image_vertex"],
-                fragment_path=IMAGE_SHADERS["image_fragment"],
-            )
+                validate_shader_paths(shaders=IMAGE_SHADERS)
+                self._program_manager.initialize(
+                    vertex_path=IMAGE_SHADERS["image_vertex"],
+                    fragment_path=IMAGE_SHADERS["image_fragment"],
+                )
 
-            if not self._program_manager.is_valid:
-                raise GLInitializationError("Failed to create shader program")
+                if not self._program_manager.is_valid:
+                    raise GLInitializationError("Failed to create shader program")
 
-            self._program_manager.uniform_manager.register_members(
-                VertexShaderUniforms
-            )
-            self._program_manager.uniform_manager.register_members(
-                FragmentShaderUniforms
-            )
+                self._program_manager.uniform_manager.register_members(
+                    VertexShaderUniforms
+                )
+                self._program_manager.uniform_manager.register_members(
+                    FragmentShaderUniforms
+                )
 
-            if not self._geo_manager.initialize():
-                raise GLInitializationError("Failed to initialise geometry")
+                if not self._geo_manager.initialize():
+                    raise GLInitializationError("Failed to initialise geometry")
 
-            ctx = self.context()
-            if not ctx or not ctx.isValid():
-                raise GLInitializationError("OpenGL context is invalid")
+                ctx = self.context()
+                if not ctx or not ctx.isValid():
+                    raise GLInitializationError("OpenGL context is invalid")
 
-            self._cmap_texture_id = GLTexture(
-                self._texture_manager.create_texture("cmap"))
-            self._gl_state.initialized = True
+                self._cmap_texture_id = GLTexture(
+                    self._texture_manager.create_texture("cmap"))
+                self._gl_state.initialized = True
 
-            self._sync_settings_to_view()
-            self._view_manager.handle_resize(self.width(), self.height())
-            self.settings.changed.connect(self._on_settings_changed)
-            self._pbo_download_bridge.imageReady.connect(self.imageReady.emit)
+                self._sync_settings_to_view()
+                self._view_manager.handle_resize(self.width(), self.height())
+                self.settings.changed.connect(self._on_settings_changed)
+                self._pbo_download_bridge.imageReady.connect(self.imageReady.emit)
 
-            logger.info(
-                "OpenGL initialisation complete",
-                program_id=self._program_manager.handle,
-                cmap_texture_id=self._cmap_texture_id,
-            )
+                logger.info(
+                    "OpenGL initialisation complete",
+                    program_id=self._program_manager.handle,
+                    cmap_texture_id=self._cmap_texture_id,
+                )
 
-        except GLInitializationError:
-            # Already the right type — emit signal then re-raise unchanged.
-            raise
-        except GLError as e:
-            # A specific GL subclass from a subsystem (shader, texture, etc.)
-            # — wrap it so callers only need to catch one init-phase type.
-            msg = f"GL initialisation failed: {e}"
-            logger.error(msg)
-            self.glError.emit(msg)
-            raise GLInitializationError(msg) from e
-        except Exception as e:
-            msg = f"Unexpected error during GL initialisation: {e}"
-            logger.error(msg, exception_type=type(e).__name__)
-            self.glError.emit(msg)
-            raise GLInitializationError(msg) from e
+            except GLInitializationError:
+                # Already the right type — emit signal then re-raise unchanged.
+                raise
+            except GLError as e:
+                # A specific GL subclass from a subsystem (shader, texture, etc.)
+                # — wrap it so callers only need to catch one init-phase type.
+                msg = f"GL initialization failed: {e}"
+                logger.error(msg)
+                self.glError.emit(msg)
+                raise GLInitializationError(msg) from e
+            except Exception as e:
+                msg = f"Unexpected error during GL initialization: {e}"
+                logger.error(msg, exception_type=type(e).__name__)
+                self.glError.emit(msg)
+                raise GLInitializationError(msg) from e
 
     def resizeGL(self, width: GLsizei, height: GLsizei) -> None:
         """

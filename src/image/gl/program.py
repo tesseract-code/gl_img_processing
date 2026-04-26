@@ -37,7 +37,7 @@ from typing import Iterator, Optional, Union, Any
 import numpy as np
 
 from image.gl.backend import GL
-from image.gl.errors import GLShaderError
+from image.gl.errors import GLShaderError, GLInitializationError
 from image.gl.types import GLenum, GLint, GLuint
 from image.gl.uniform import UniformManager
 
@@ -254,11 +254,12 @@ def create_program(
 
     try:
         program = link_program(vertex_shader, fragment_shader)
-    finally:
+    except:
         # Delete both shader handles unconditionally.  If linking raised,
         # the finally block still runs and the handles are freed.
         GL.glDeleteShader(vertex_shader)
         GL.glDeleteShader(fragment_shader)
+        raise
 
     logger.info("Shader program created successfully (id=%d)", program)
     return program
@@ -502,6 +503,12 @@ class ShaderProgramManager:
         prog = create_program(vertex_path=vertex_path,
                               fragment_path=fragment_path)
         self._program_id = prog
+
+        success = GL.glGetProgramiv(self._program_id, GL.GL_LINK_STATUS)
+        if not success:
+            log = GL.glGetProgramInfoLog(self._program_id)
+            raise RuntimeError(f"Program link failed: {log}")
+
         self._uniform_manager = UniformManager(self._program_id)
 
     def cleanup(self) -> None:
