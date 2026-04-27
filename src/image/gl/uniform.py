@@ -203,7 +203,7 @@ class UniformManager:
     def register_members(
             self,
             enum_cls: Type[StrEnum],
-            introspect: bool = True,
+            introspect: bool = False,
     ) -> None:
         """
         Register all uniforms declared in a `~enum.StrEnum` class.
@@ -225,7 +225,7 @@ class UniformManager:
     def register_uniforms(
             self,
             names: list[str],
-            introspect: bool = True,
+            introspect: bool = False,
     ) -> None:
         """
         Query and cache locations for the given uniform names.
@@ -254,6 +254,7 @@ class UniformManager:
             for name in names:
                 location = GL.glGetUniformLocation(self._program, name)
                 self._locations[name] = GLint(location)
+                print(name, location)
 
                 if location == -1:
                     # Inactive uniforms are legal — the GLSL compiler removes
