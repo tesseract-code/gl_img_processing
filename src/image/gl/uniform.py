@@ -254,7 +254,6 @@ class UniformManager:
             for name in names:
                 location = GL.glGetUniformLocation(self._program, name)
                 self._locations[name] = GLint(location)
-                print(name, location)
 
                 if location == -1:
                     # Inactive uniforms are legal — the GLSL compiler removes
