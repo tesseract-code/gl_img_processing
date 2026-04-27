@@ -45,7 +45,7 @@ from typing import Any, Type, Union, cast
 import numpy as np
 
 from image.gl.backend import GL
-from image.gl.errors import GLError
+from image.gl.errors import GLError, gl_error_check
 from image.gl.types import GLenum, GLint, GLuint
 from image.utils.data import ensure_contiguity
 from pycore.log.ctx import ContextAdapter
@@ -220,6 +220,7 @@ class UniformManager:
         names: list[str] = [
             cast(str, member.value) for member in enum_cls.__members__.values()
         ]
+        print(names)
         self.register_uniforms(names, introspect=introspect)
 
     def register_uniforms(
@@ -244,40 +245,39 @@ class UniformManager:
                         `set` can dispatch correctly without an explicit
                         `UniformType` argument.
         """
-        GL.glUseProgram(self._program)
-        self._check_gl_error("glUseProgram before uniform registration")
+        with gl_error_check("glUseProgram before uniform registration"):
+            GL.glUseProgram(self._program)
 
-        uniform_info: dict[str, dict[str, Any]] = {}
-        if introspect:
-            uniform_info = self._introspect_uniforms()
+            uniform_info: dict[str, dict[str, Any]] = {}
+            if introspect:
+                uniform_info = self._introspect_uniforms()
 
-        for name in names:
-            location = GL.glGetUniformLocation(self._program, name)
-            self._locations[name] = GLint(location)
+            for name in names:
+                location = GL.glGetUniformLocation(self._program, name)
+                self._locations[name] = GLint(location)
 
-            if location == -1:
-                # Inactive uniforms are legal — the GLSL compiler removes
-                # variables that have no observable effect on the output.
-                self._logger.warning(
-                    "Uniform '%s' not found in program %d "
-                    "(may be unused/optimised out)",
-                    name, self._program,
-                )
-            else:
-                # Expose via dot-notation only for active uniforms.
-                setattr(self.locs, name, GLint(location))
-
-                if name in uniform_info:
-                    self._types[name] = GLenum(uniform_info[name]["type"])
-                    self._logger.debug(
-                        "Uniform '%s' cached: loc=%d type=%s",
-                        name,
-                        location,
-                        self._gl_type_name(uniform_info[name]["type"]),
+                if location == -1:
+                    # Inactive uniforms are legal — the GLSL compiler removes
+                    # variables that have no observable effect on the output.
+                    self._logger.warning(
+                        "Uniform '%s' not found in program %d "
+                        "(may be unused/optimised out)",
+                        name, self._program,
                     )
+                else:
+                    # Expose via dot-notation only for active uniforms.
+                    setattr(self.locs, name, GLint(location))
 
-        GL.glUseProgram(0)
-        self._check_gl_error("glUseProgram after uniform registration")
+                    if name in uniform_info:
+                        self._types[name] = GLenum(uniform_info[name]["type"])
+                        self._logger.debug(
+                            "Uniform '%s' cached: loc=%d type=%s",
+                            name,
+                            location,
+                            self._gl_type_name(uniform_info[name]["type"]),
+                        )
+
+            GL.glUseProgram(0)
 
     def set(
             self,
@@ -607,24 +607,3 @@ class UniformManager:
             GL.GL_SAMPLER_CUBE: "samplerCube",
         }
         return _NAMES.get(int(gl_type), "0x%x" % gl_type)
-
-    def _check_gl_error(self, operation: str) -> None:
-        """
-        Drain one error from the GL queue and raise if non-zero.
-
-        Called at the bookend of `register_uniforms` to verify that
-        the program bind and unbind operations succeeded.
-
-        Args:
-            operation: Human-readable label for the operation being checked,
-                       included in the exception and log message.
-
-        Raises:
-            GLError: If ``glGetError`` returns anything other than
-                     ``GL_NO_ERROR``.
-        """
-        error = GL.glGetError()
-        if error != GL.GL_NO_ERROR:
-            msg = "OpenGL error 0x%x during %s" % (error, operation)
-            self._logger.error(msg)
-            raise GLError(msg)
